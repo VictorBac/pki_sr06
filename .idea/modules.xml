@@ -2,8 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/cryptoki-explorer.iml" filepath="$PROJECT_DIR$/cryptoki-explorer.iml" />
-      <module fileurl="file://$PROJECT_DIR$/pki_sr06.iml" filepath="$PROJECT_DIR$/pki_sr06.iml" />
+      <module fileurl="file://$PROJECT_DIR$/src/main/main.iml" filepath="$PROJECT_DIR$/src/main/main.iml" />
     </modules>
   </component>
 </project>
