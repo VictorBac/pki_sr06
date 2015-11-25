@@ -7,5 +7,6 @@ public class MainTest {
     @Test
     public void add() {
         assertEquals(Main.add(3, 4), 7);
+        assertEquals("projet fini", "projet pas fini");
     }
 }
