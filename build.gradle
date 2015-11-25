@@ -10,9 +10,13 @@ applicationDefaultJvmArgs = []
 sourceCompatibility = 1.8
 
 repositories {
+    flatDir {
+        dirs 'lib'
+    }
     mavenCentral()
 }
 
 dependencies {
     testCompile group: 'junit', name: 'junit', version: '4.11'
+    compile name: 'iaikPkcs11Wrapper'
 }
