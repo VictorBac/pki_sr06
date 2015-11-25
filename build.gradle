@@ -2,8 +2,12 @@ group 'fr.utc.sr06'
 version '0.1-SNAPSHOT'
 
 apply plugin: 'java'
+apply plugin: 'application'
 
-sourceCompatibility = 1.5
+mainClassName = "fr.utc.sr06.CryptokiExplorer.Main"
+applicationDefaultJvmArgs = []
+
+sourceCompatibility = 1.8
 
 repositories {
     mavenCentral()
