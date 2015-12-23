@@ -1,8 +1,6 @@
 package fr.utc.sr06.CryptokiExplorer;
 
-import iaik.pkcs.pkcs11.Module;
-import iaik.pkcs.pkcs11.Slot;
-import iaik.pkcs.pkcs11.TokenException;
+import iaik.pkcs.pkcs11.*;
 
 import java.io.IOException;
 
@@ -16,7 +14,24 @@ public class Main {
 
             Slot[] slots = m.getSlotList(Module.SlotRequirement.ALL_SLOTS);
             for (Slot slot : slots) {
-                System.out.format("Slot: %d\n%s", slot.getSlotID(), slot.getModule());
+                long id = slot.getSlotID();
+                System.out.format("Slot: %d\n%s\n", id, slot.getModule());
+
+                if (slot.getSlotInfo().isTokenPresent()) {
+                    Token t = slot.getToken(); // un slot = un token (ou null)
+
+                    for (Mechanism mech: t.getMechanismList()) {
+                        MechanismInfo mi = t.getMechanismInfo(mech);
+                        System.out.format("Mechanism: %s\n", mech.getName());
+                        System.out.println(mi);
+                    }
+                }
+
+                /*System.out.println("C_Mechanism:");
+                for (long mech_id : m.getPKCS11Module().C_GetMechanismList(id)) {
+                    Mechanism mech = new Mechanism(mech_id);
+                    System.out.format("Mechanism: %s\n", mech.getName());
+                }*/
             }
 
             m.finalize(null);
