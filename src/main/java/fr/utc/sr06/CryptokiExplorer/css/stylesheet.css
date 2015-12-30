@@ -1,0 +1,105 @@
+
+
+.button{
+    -fx-text-fill: rgb(49, 89, 23);
+    -fx-border-color: rgb(49, 89, 23);
+    -fx-padding: 3 6 6 6;
+}
+
+
+  .text-area .content{
+    -fx-background-color: #080808;
+        -fx-text-fill: rgb(49, 89, 23);
+            -fx-border-color: rgb(49, 89, 23);
+
+  }
+
+
+
+
+.label{
+    -fx-text-fill: rgb(49, 89, 23);
+
+}
+
+.text-field{
+
+    -fx-border-color: rgb(49, 89, 23);
+    -fx-text-fill: #dedede;
+    -fx-background-color: #000;
+    -fx-font-family: "Segoe UI Light";
+}
+
+.list-cell:filled:selected:focused, .list-cell:filled:selected {
+    -fx-background-color: rgb(49, 89, 23);
+    -fx-text-fill: #000;
+}
+
+.list-cell:odd {
+    -fx-text-fill: rgb(49, 89, 23);
+
+    -fx-cell-hover-color: white;
+    -fx-background-color: #000000;
+}
+.list-cell {
+    -fx-text-fill: rgb(49, 89, 23);
+
+    -fx-cell-hover-color: white;
+    -fx-background-color: #080808;
+}
+
+.list-cell:filled:hover {
+    -fx-cell-hover-color: #000000;
+    -fx-text-fill: #fff;
+}
+
+
+
+
+.menu-bar{
+    -fx-border-color: #EAC117 ;
+
+      -fx-background-color: #000;
+ -fx-border-width: 0 0 1 0;
+                -fx-border-color: gray;
+                -fx-font-weight: bold
+}
+
+.menu-bar .label {
+    -fx-font-size: 10 pt;
+    -fx-font-family: "Segoe UI Light";
+    -fx-text-fill: rgb(49, 89, 23);
+
+}
+
+.menu{
+ -fx-border-width: 0 1 0 0;
+                -fx-border-color: gray;
+                -fx-font-weight: bold
+
+
+}
+
+
+.menu:hover {
+    -fx-background-color: #dedede;
+}
+.choice-box{
+    -fx-border-color: #EAC117 ;
+      -fx-background-color: #000;
+  -fx-text-fill: rgb(49, 89, 23);
+
+}
+
+.scroll-bar{
+
+
+}
+
+.root {
+  -fx-background-color: #000000;
+
+  -fx-background-repeat: stretch;
+
+}
+
