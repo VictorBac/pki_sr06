@@ -1,6 +1,5 @@
 package fr.utc.sr06.CryptokiExplorer;
 
-import com.sun.org.apache.xpath.internal.operations.Mod;
 import iaik.pkcs.pkcs11.*;
 import iaik.pkcs.pkcs11.objects.KeyPair;
 import iaik.pkcs.pkcs11.objects.Object;
@@ -116,7 +115,7 @@ public class ModuleManager {
         System.out.flush();
 
         // first check out what attributes of the keys we may set
-        HashSet supportedMechanisms = new HashSet(Arrays.asList(tok.getMechanismList()));
+        HashSet supportedMechanisms = new HashSet<>(Arrays.asList(tok.getMechanismList()));
 
         MechanismInfo signatureMechanismInfo;
         if (supportedMechanisms.contains(Mechanism.get(PKCS11Constants.CKM_RSA_PKCS))) {
