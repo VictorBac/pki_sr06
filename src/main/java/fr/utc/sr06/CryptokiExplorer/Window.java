@@ -3,33 +3,30 @@ package fr.utc.sr06.CryptokiExplorer;/**
  */
 
 import iaik.pkcs.pkcs11.Module;
+import iaik.pkcs.pkcs11.Slot;
+import iaik.pkcs.pkcs11.Token;
 import iaik.pkcs.pkcs11.TokenException;
-
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
-
 import javafx.event.EventHandler;
 import javafx.geometry.Pos;
-
+import javafx.scene.Node;
 import javafx.scene.Scene;
-
 import javafx.scene.control.*;
-
 import javafx.scene.image.Image;
-import javafx.scene.layout.*;
-
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Pane;
+import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Locale;
-import java.util.MissingResourceException;
-import java.util.Optional;
-import java.util.ResourceBundle;
+import java.util.*;
 
 public class Window extends Application {
 
@@ -41,6 +38,11 @@ public class Window extends Application {
 
     private TextField moduleField;
     private MessageIndicator messageIndicator;
+    private Pane functionZone;
+    private ListView<Slot> slotsSidebar;
+    private ObservableList<Slot> slots;
+    private ListView<UIFunction> functionsSidebar;
+    private ObservableList<UIFunction> functions;
 
     private ResourceBundle translations;
 
@@ -84,8 +86,8 @@ public class Window extends Application {
         hb.setAlignment(Pos.CENTER_LEFT);
 
         messageIndicator = new MessageIndicator();
-        subroot.setLeft(getLeftListview());
-        subroot.setCenter(getCenterAreaText());
+        subroot.setLeft(getLeftLists());
+        subroot.setCenter(getFunctionZone());
 
         MenuBar menuBar = createMenus();
         root.getChildren().addAll(menuBar, hb, messageIndicator, subroot);
@@ -121,16 +123,44 @@ public class Window extends Application {
 
     private void loadModule(String path) {
         try {
+            unloadCurrentModule();
+
             cryptoModule = Module.getInstance(path);
             cryptoModule.initialize(null);
             modulePath = path;
             moduleField.setText(path);
+
+            slots.addAll(cryptoModule.getSlotList(Module.SlotRequirement.ALL_SLOTS));
+            functions.addAll(new InfoFunction(t_("infoFunction"), cryptoModule), new MechanismsFunction(t_("mechanismsFunction"), cryptoModule));
+
+            Platform.runLater(() -> {
+                if (!slots.isEmpty()) {
+                    slotsSidebar.getSelectionModel().select(0);
+                    functionsSidebar.getSelectionModel().select(0); // select Info
+                }
+            });
         } catch (IOException e) {
             messageIndicator.error(t_("moduleOpenIOError"), e.getLocalizedMessage());
             e.printStackTrace();
         } catch (TokenException e) {
             messageIndicator.error(t_("moduleOpenInitError"), e.getLocalizedMessage());
             e.printStackTrace();
+        }
+    }
+
+    private void unloadCurrentModule() {
+        // sidebars hold references to the module
+        slots.clear();
+        functions.clear();
+
+        if (cryptoModule != null) {
+            try {
+                cryptoModule.finalize(null);
+            } catch (TokenException e) {
+                e.printStackTrace(); // TODO propager aux appelants ?
+            }
+
+            cryptoModule = null;
         }
     }
 
@@ -168,37 +198,78 @@ public class Window extends Application {
         return menuBar;
     }
 
-    private TextArea getCenterAreaText() {
-        TextArea lbl = new TextArea();
-        lbl.setPrefWidth(SIZE);
-        lbl.prefHeightProperty().bind(root.heightProperty().subtract(100));
+    private Pane getFunctionZone() {
+        functionZone = new HBox();
+        functionZone.setPrefWidth(SIZE);
+        functionZone.prefHeightProperty().bind(root.heightProperty().subtract(100));
 
-        return lbl;
+        return functionZone;
     }
 
 
-    private ListView getLeftListview() {
+    private Node getLeftLists() {
+        slotsSidebar = new ListView<>();
+        slots = FXCollections.observableArrayList();
+        slotsSidebar.setItems(slots);
+        slotsSidebar.setPlaceholder(new Label(t_("placeholderSlotsSidebar")));
+        slotsSidebar.setCellFactory((view) ->
+            new ListCell<Slot>() {
+                @Override
+                protected void updateItem(Slot item, boolean empty) {
+                    super.updateItem(item, empty);
 
-        ListView<String> list = new ListView<>();
-        list.prefWidthProperty().bind(root.widthProperty().divide(5));
-        list.prefHeightProperty().bind(root.heightProperty().divide(3));
-        ObservableList<String> items = FXCollections.observableArrayList (
-                "Single", "Double", "Suite", "Family App");
-        list.setItems(items);
+                    if (empty || item == null) {
+                        setText(null);
+                    } else {
+                        // TODO, c'est le bordel
+                        Token token = null;
+                        try {
+                            token = item.getToken();
+                        } catch (TokenException e) {
+                            e.printStackTrace();
+                        }
+                        if (token != null) {
+                            setText(String.format(t_("tokenPresentCell"), item.getSlotID()));
+                        } else {
+                            setText(String.format(t_("noTokenCell"), item.getSlotID()));
+                        }
+                    }
+                }
+            }
+        );
 
-        return list;
+        functionsSidebar = new ListView<>();
+        functionsSidebar.prefWidthProperty().bind(root.widthProperty().divide(5));
+        functionsSidebar.prefHeightProperty().bind(root.heightProperty().divide(3));
+        functionsSidebar.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue == null) {
+                return;
+            }
+
+            newValue.load(getCurrentSlot());
+            functionZone.getChildren().setAll(newValue.getUI());
+
+            if (oldValue != null) {
+                oldValue.unload();
+            }
+        });
+        functions = FXCollections.observableArrayList();
+        functionsSidebar.setItems(functions);
+        functionsSidebar.setPlaceholder(new Label(t_("placeholderFunctionsSidebar")));
+
+        VBox box = new VBox();
+        box.getChildren().addAll(slotsSidebar, functionsSidebar);
+        return box;
+    }
+
+    private Slot getCurrentSlot() {
+        return slotsSidebar.getSelectionModel().getSelectedItem();
     }
 
     @Override
     /* Appelé quand l'application se termine (appel de Platform.exit() ou fermeture de la dernière fenêtre */
     public void stop() {
-        if (cryptoModule != null) {
-            try {
-                cryptoModule.finalize(null);
-            } catch (TokenException e) {
-                e.printStackTrace();
-            }
-        }
+        unloadCurrentModule();
     }
 
     public static void main(String[] args) {
