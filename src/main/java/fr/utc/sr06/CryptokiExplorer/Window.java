@@ -6,12 +6,12 @@ import iaik.pkcs.pkcs11.Module;
 import iaik.pkcs.pkcs11.TokenException;
 
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 
 import javafx.event.EventHandler;
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 
 import javafx.scene.Scene;
@@ -26,16 +26,10 @@ import javafx.stage.Stage;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Locale;
+import java.util.MissingResourceException;
 import java.util.Optional;
-
-class MyLabel extends Label {
-
-    public MyLabel(String text) {
-        super(text);
-
-        setAlignment(Pos.BASELINE_CENTER);
-    }
-}
+import java.util.ResourceBundle;
 
 public class Window extends Application {
 
@@ -48,24 +42,39 @@ public class Window extends Application {
     private TextField moduleField;
     private MessageIndicator messageIndicator;
 
+    private ResourceBundle translations;
+
     @Override
     public void start(Stage stage) {
+        loadTranslations();
         initUI(stage);
+    }
+
+    private void loadTranslations() {
+        try {
+            translations = ResourceBundle.getBundle("translations/main", Locale.getDefault());
+        } catch (MissingResourceException e) {
+            translations = ResourceBundle.getBundle("translations/main", Locale.ENGLISH);
+        }
+    }
+
+    private String t_(String key) {
+        return translations.getString(key);
     }
 
     private void initUI(Stage stage) {
         root = new VBox();
         BorderPane subroot = new BorderPane();
 
-        Label label1 = new Label("Load module:");
+        Label label1 = new Label(t_("modulePathLabel"));
 
         moduleField = new TextField();
-        moduleField.promptTextProperty().set("Type the module path here or click on 'choose module'...");
+        moduleField.promptTextProperty().set(t_("modulePathPlaceholder"));
         moduleField.setOnAction((event) -> loadModule(moduleField.getText()));
         moduleField.prefWidthProperty().bind(root.widthProperty().divide(2));
 
         Button loadModuleButton = new Button();
-        loadModuleButton.setText("Choose a module...");
+        loadModuleButton.setText(t_("chooseModuleButton"));
         loadModuleButton.setOnAction((event) -> chooseAndLoadModule());
 
         HBox hb = new HBox();
@@ -87,7 +96,7 @@ public class Window extends Application {
 
         stage.getIcons().add(new Image("css/key-xxl.png"));
 
-        stage.setTitle("BorderPane");
+        stage.setTitle(t_("mainWindowTitle"));
         stage.setScene(scene);
         stage.show();
 
@@ -117,10 +126,10 @@ public class Window extends Application {
             modulePath = path;
             moduleField.setText(path);
         } catch (IOException e) {
-            messageIndicator.error("Unable to load the module: " + e.getLocalizedMessage());
+            messageIndicator.error(t_("moduleOpenIOError"), e.getLocalizedMessage());
             e.printStackTrace();
         } catch (TokenException e) {
-            messageIndicator.error("Unable to initialize the module: " + e.getLocalizedMessage());
+            messageIndicator.error(t_("moduleOpenInitError"), e.getLocalizedMessage());
             e.printStackTrace();
         }
     }
@@ -140,12 +149,15 @@ public class Window extends Application {
     private MenuBar createMenus() {
         MenuBar menuBar = new MenuBar();
 
-        Menu menuFile = new Menu("File");
+        Menu menuFile = new Menu(t_("fileMenu"));
 
-        MenuItem module = new MenuItem("Choose Module...");
-        module.setOnAction(ActionMenuFile());
-        menuFile.getItems().add(module);
+        MenuItem module = new MenuItem(t_("chooseModuleButton"));
+        module.setOnAction((event) -> chooseAndLoadModule());
 
+        MenuItem quit = new MenuItem(t_("quitMenuItem"));
+        quit.setOnAction((event) -> Platform.exit());
+
+        menuFile.getItems().addAll(module, quit);
 
         Menu menuEdit = new Menu("Edit");
 
@@ -156,70 +168,8 @@ public class Window extends Application {
         return menuBar;
     }
 
-    private Label getTopLabel() {
-
-
-
-        Label lbl = new MyLabel("Top");
-        lbl.setPrefHeight(SIZE);
-        lbl.prefWidthProperty().bind(root.widthProperty());
-        lbl.setStyle("-fx-border-style: dotted; -fx-border-width: 0 0 1 0;"
-                + "-fx-border-color: gray; -fx-font-weight: bold");
-
-        return lbl;
-    }
-
-    private ChoiceBox getTopChoice() {
-
-
-        ChoiceBox cb = new ChoiceBox();
-        cb.setItems(FXCollections.observableArrayList(
-                "New Document", "Open ",
-                new Separator(), "Save", "Save as")
-        );
-
-        return cb;
-
-    }
-
-
-    private HBox getTopBox() {
-
-        Label label1 = new Label("Module chargé:");
-        TextField textField = new TextField ("./");
-        textField.prefWidthProperty().bind(root.widthProperty().divide(2));
-
-        HBox hb = new HBox();
-        hb.prefHeightProperty().bind(root.heightProperty().divide(12));
-        hb.getChildren().addAll(label1, textField);
-        hb.setSpacing(10);
-
-        hb.setAlignment(Pos.CENTER_LEFT);
-        return hb;
-    }
-    private Label getBottomLabel() {
-
-        Label lbl = new MyLabel("Bottom");
-        lbl.setPrefHeight(SIZE);
-        lbl.prefWidthProperty().bind(root.widthProperty());
-        //lbl.setStyle("-fx-border-style: dotted; -fx-border-width: 1 0 0 0;"
-        //        + "-fx-border-color: gray; -fx-font-weight: bold");
-
-        return lbl;
-    }
-
-    private Label getLeftLabel() {
-
-        Label lbl = new MyLabel("Left");
-        lbl.setPrefWidth(SIZE);
-        lbl.prefHeightProperty().bind(root.widthProperty());
-        return lbl;
-    }
-
-
     private TextArea getCenterAreaText() {
-
-        TextArea lbl = new TextArea("Left");
+        TextArea lbl = new TextArea();
         lbl.setPrefWidth(SIZE);
         lbl.prefHeightProperty().bind(root.heightProperty().subtract(100));
 
@@ -229,44 +179,30 @@ public class Window extends Application {
 
     private ListView getLeftListview() {
 
-        ListView<String> list = new ListView<String>();
+        ListView<String> list = new ListView<>();
         list.prefWidthProperty().bind(root.widthProperty().divide(5));
         list.prefHeightProperty().bind(root.heightProperty().divide(3));
-        ObservableList<String> items =FXCollections.observableArrayList (
+        ObservableList<String> items = FXCollections.observableArrayList (
                 "Single", "Double", "Suite", "Family App");
         list.setItems(items);
 
         return list;
     }
 
-
-    private Label getRightLabel() {
-
-        Label lbl = new MyLabel("Right");
-        lbl.setPrefWidth(SIZE);
-        lbl.prefHeightProperty().bind(root.heightProperty().subtract(2*SIZE));
-       // lbl.setStyle("-fx-border-style: dotted; -fx-border-width: 0 0 0 1;"
-        //        + "-fx-border-color: gray; -fx-font-weight: bold");
-
-        return lbl;
-    }
-
-    private Label getCenterLabel() {
-
-        Label lbl = new MyLabel("Center");
-        lbl.setStyle("-fx-font-weight: bold");
-        lbl.prefHeightProperty().bind(root.heightProperty().subtract(2*SIZE));
-        lbl.prefWidthProperty().bind(root.widthProperty().subtract(2*SIZE));
-
-        return lbl;
+    @Override
+    /* Appelé quand l'application se termine (appel de Platform.exit() ou fermeture de la dernière fenêtre */
+    public void stop() {
+        if (cryptoModule != null) {
+            try {
+                cryptoModule.finalize(null);
+            } catch (TokenException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     public static void main(String[] args) {
-
-
-        launch(args);
+        Window win = new Window();
+        win.launch(args);
     }
-
-
-
 }
