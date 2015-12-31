@@ -17,8 +17,8 @@ import java.util.*;
 
 public class Main {
     public static void main(String[] args) {
-        System.out.println("il a pas dit bonjour.");
-
+        Window.main(args);
+        /*
         try {
             //CREE UN TOKEN AVEC 2 CLES RSA (PUBLIC ET PRIVEE);
             createToken();
@@ -48,7 +48,7 @@ public class Main {
             e.printStackTrace();
         } catch (InvalidKeySpecException e) {
             e.printStackTrace();
-        }
+        }*/
     }
 
     public static void createToken() throws TokenException, IOException, InvalidKeySpecException, NoSuchAlgorithmException {
@@ -247,9 +247,5 @@ public class Main {
         session2.closeSession();
         m.finalize(null);
 
-    }
-
-    public static int add(int a, int b) {
-        return a + b;
     }
 }

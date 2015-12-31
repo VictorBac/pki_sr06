@@ -2,13 +2,16 @@ package fr.utc.sr06.CryptokiExplorer;/**
  * Created by raphael on 23/12/15.
  */
 
-import javafx.application.Application;
+import iaik.pkcs.pkcs11.Module;
+import iaik.pkcs.pkcs11.TokenException;
 
+import javafx.application.Application;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 
 import javafx.event.EventHandler;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 
 import javafx.scene.Scene;
@@ -16,17 +19,14 @@ import javafx.scene.Scene;
 import javafx.scene.control.*;
 
 import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
 
-import javafx.scene.text.Font;
-import javafx.scene.text.FontWeight;
-import javafx.scene.text.TextAlignment;
-import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 import java.io.File;
+import java.io.IOException;
+import java.util.Optional;
 
 class MyLabel extends Label {
 
@@ -39,39 +39,111 @@ class MyLabel extends Label {
 
 public class Window extends Application {
 
-    private BorderPane root;
+    private VBox root;
     private final int SIZE = 60;
+
+    private Module cryptoModule;
+    private String modulePath;
+
+    private TextField moduleField;
+    private MessageIndicator messageIndicator;
 
     @Override
     public void start(Stage stage) {
-
-
         initUI(stage);
     }
 
     private void initUI(Stage stage) {
-
-        root = new BorderPane();
+        root = new VBox();
         BorderPane subroot = new BorderPane();
 
+        Label label1 = new Label("Load module:");
 
-        Label label1 = new Label("Module chargé:");
-        TextField textField = new TextField ("./");
-        textField.prefWidthProperty().bind(root.widthProperty().divide(2));
+        moduleField = new TextField();
+        moduleField.promptTextProperty().set("Type the module path here or click on 'choose module'...");
+        moduleField.setOnAction((event) -> loadModule(moduleField.getText()));
+        moduleField.prefWidthProperty().bind(root.widthProperty().divide(2));
+
+        Button loadModuleButton = new Button();
+        loadModuleButton.setText("Choose a module...");
+        loadModuleButton.setOnAction((event) -> chooseAndLoadModule());
 
         HBox hb = new HBox();
+        hb.getStyleClass().add("module-path-bar");
         hb.prefHeightProperty().bind(root.heightProperty().divide(12));
-        hb.getChildren().addAll(label1, textField);
-        hb.setSpacing(10);
-
+        hb.getChildren().addAll(label1, moduleField, loadModuleButton);
         hb.setAlignment(Pos.CENTER_LEFT);
 
+        messageIndicator = new MessageIndicator();
+        subroot.setLeft(getLeftListview());
+        subroot.setCenter(getCenterAreaText());
+
+        MenuBar menuBar = createMenus();
+        root.getChildren().addAll(menuBar, hb, messageIndicator, subroot);
+
+
+        Scene scene = new Scene(root, 1000 , 800);
+        scene.getStylesheets().add("css/stylesheet.css");
+
+        stage.getIcons().add(new Image("css/key-xxl.png"));
+
+        stage.setTitle("BorderPane");
+        stage.setScene(scene);
+        stage.show();
+
+        loadModuleButton.requestFocus();
+    }
+
+    private EventHandler<ActionEvent> ActionMenuFile() {
+        return event -> {
+            MenuItem mItem = (MenuItem) event.getSource();
+            String side = mItem.getText();
+            if ("Choose Module...".equalsIgnoreCase(side)) {
+                chooseAndLoadModule();
+            } else if ("Charger_Module".equalsIgnoreCase(side)) {
+                System.out.println("right");
+            } else if ("Charger_Module".equalsIgnoreCase(side)) {
+                System.out.println("top");
+            } else if ("Charger_Module".equalsIgnoreCase(side)) {
+                System.out.println("bottom");
+            }
+        };
+    }
+
+    private void loadModule(String path) {
+        try {
+            cryptoModule = Module.getInstance(path);
+            cryptoModule.initialize(null);
+            modulePath = path;
+            moduleField.setText(path);
+        } catch (IOException e) {
+            messageIndicator.error("Unable to load the module: " + e.getLocalizedMessage());
+            e.printStackTrace();
+        } catch (TokenException e) {
+            messageIndicator.error("Unable to initialize the module: " + e.getLocalizedMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private void chooseAndLoadModule() {
+        askModule().ifPresent((file) -> loadModule(file.getAbsolutePath()));
+    }
+
+    private Optional<File> askModule() {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Choose Module Library");
+        fileChooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("Module Files", "*.so", "*.dll", "*.dylib"));
+        return Optional.ofNullable(fileChooser.showOpenDialog(root.getScene().getWindow()));
+    }
+
+    private MenuBar createMenus() {
         MenuBar menuBar = new MenuBar();
 
         Menu menuFile = new Menu("File");
 
-        MenuItem module = new MenuItem("Charger_Module");
-        module.setOnAction(ActionMenuFile(textField));
+        MenuItem module = new MenuItem("Choose Module...");
+        module.setOnAction(ActionMenuFile());
         menuFile.getItems().add(module);
 
 
@@ -81,62 +153,8 @@ public class Window extends Application {
 
         menuBar.getMenus().addAll(menuFile, menuEdit, menuView);
 
-
-
-
-        root.setTop(menuBar);
-        root.setCenter(subroot);
-        root.setLeft(getLeftLabel());
-        subroot.setTop(hb);
-
-        // root.setTop(getTopChoice());
-        root.setBottom(getBottomLabel());
-        subroot.setLeft(getLeftListview());
-        subroot.setRight(getRightLabel());
-        subroot.setCenter(getCenterAreaText());
-
-        Scene scene = new Scene(root, 1000 , 800);
-        scene.getStylesheets().add("fr/utc/sr06/CryptokiExplorer/css/stylesheet.css");
-
-        stage.getIcons().add(new Image("fr/utc/sr06/CryptokiExplorer/css/key-xxl.png"));
-
-
-        stage.setTitle("BorderPane");
-        stage.setScene(scene);
-        stage.show();
-
-
+        return menuBar;
     }
-
-    private EventHandler<ActionEvent> ActionMenuFile(final TextField arg) {
-        return new EventHandler<ActionEvent>() {
-
-            public void handle(ActionEvent event) {
-                MenuItem mItem = (MenuItem) event.getSource();
-                String side = mItem.getText();
-                if ("Charger_Module".equalsIgnoreCase(side)) {
-
-                    FileChooser fileChooser = new FileChooser();
-                    fileChooser.setTitle("Open Resource File");
-                    fileChooser.getExtensionFilters().addAll(
-                            new FileChooser.ExtensionFilter("Module Files", "*.so"));
-                    File selectedFile = fileChooser.showOpenDialog(root.getScene().getWindow());
-                    if (selectedFile != null) {
-                            arg.setText(selectedFile.getAbsolutePath());
-                    }
-
-
-                } else if ("Charger_Module".equalsIgnoreCase(side)) {
-                    System.out.println("right");
-                } else if ("Charger_Module".equalsIgnoreCase(side)) {
-                    System.out.println("top");
-                } else if ("Charger_Module".equalsIgnoreCase(side)) {
-                    System.out.println("bottom");
-                }
-            }
-        };
-    }
-
 
     private Label getTopLabel() {
 
