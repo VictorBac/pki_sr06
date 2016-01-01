@@ -53,11 +53,7 @@ public class Window extends Application {
     }
 
     private void loadTranslations() {
-        try {
-            translations = ResourceBundle.getBundle("translations/main", Locale.getDefault());
-        } catch (MissingResourceException e) {
-            translations = ResourceBundle.getBundle("translations/main", Locale.ENGLISH);
-        }
+        translations = ResourceBundle.getBundle("translations/main", Locale.getDefault());
     }
 
     private String t_(String key) {
@@ -237,6 +233,18 @@ public class Window extends Application {
                 }
             }
         );
+        slotsSidebar.getSelectionModel().selectedItemProperty().addListener((ob, oldValue, newValue) -> {
+            if  (newValue == null) {
+                return;
+            }
+
+            UIFunction function = getCurrentFunction();
+            if  (function != null) {
+                function.unload();
+                function.load(newValue);
+                functionZone.getChildren().setAll(function.getUI());
+            }
+        });
 
         functionsSidebar = new ListView<>();
         functionsSidebar.prefWidthProperty().bind(root.widthProperty().divide(5));
@@ -264,6 +272,10 @@ public class Window extends Application {
 
     private Slot getCurrentSlot() {
         return slotsSidebar.getSelectionModel().getSelectedItem();
+    }
+
+    private UIFunction getCurrentFunction() {
+        return functionsSidebar.getSelectionModel().getSelectedItem();
     }
 
     @Override
