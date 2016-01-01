@@ -16,9 +16,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.RSAPublicKeySpec;
 import java.security.spec.X509EncodedKeySpec;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Random;
+import java.util.*;
 
 /**
  * Created by victor on 31/12/15.
@@ -67,6 +65,16 @@ public class ModuleManager {
             return slots[id].getToken();
     }
 
+    public Map<Mechanism, MechanismInfo> getMechanismsInfo(Token tok) throws TokenException {
+        Mechanism[] mechs = tok.getMechanismList();
+        HashMap<Mechanism, MechanismInfo> result = new HashMap<>(mechs.length);
+
+        for(Mechanism m : mechs) {
+            result.put(m, tok.getMechanismInfo(m));
+        }
+
+        return result;
+    }
 
     public Token createToken(String label, String soPin, String userPin) throws TokenException, IOException, InvalidKeySpecException, NoSuchAlgorithmException {
 

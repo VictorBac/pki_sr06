@@ -2,17 +2,23 @@ group 'fr.utc.sr06'
 version '0.1-SNAPSHOT'
 
 apply plugin: 'java'
-
-compileJava {
-    options.compilerArgs << '-Xlint:unchecked'
-}
-
 apply plugin: 'application'
 
 mainClassName = "fr.utc.sr06.CryptokiExplorer.Main"
 applicationDefaultJvmArgs = []
 
 sourceCompatibility = 1.8
+
+compileJava {
+    options.compilerArgs << '-Xlint:unchecked'
+}
+
+jar {
+    manifest {
+        attributes("Main-Class": "$mainClassName",
+                "Class-Path": "iaikPkcs11Wrapper.jar")
+    }
+}
 
 repositories {
     flatDir {
