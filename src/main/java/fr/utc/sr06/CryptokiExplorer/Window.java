@@ -49,7 +49,6 @@ public class Window extends Application {
 
     @Override
     public void start(Stage stage) {
-        Locale.setDefault(new Locale("fr", "FR"));
 
         loadTranslations();
         initUI(stage);
