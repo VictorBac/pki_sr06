@@ -14,8 +14,8 @@ public class MechanismsFunction extends BaseUIFunction {
     private TextArea ui = null;
     private ResourceBundle translations;
 
-    public MechanismsFunction(String name, Module cryptoModule) { // TODO: il nous faut un moyen d'afficher des erreurs
-        super(name, cryptoModule);
+    public MechanismsFunction(String name, ModuleManager manager) { // TODO: il nous faut un moyen d'afficher des erreurs
+        super(name, manager);
         translations = ResourceBundle.getBundle("translations/mechanisms", Locale.getDefault());
     }
 

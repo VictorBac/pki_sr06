@@ -26,17 +26,18 @@ import java.util.Random;
 public class ModuleManager {
 
     protected Module m;
+    protected String path;
 
     public ModuleManager() {}
 
     public ModuleManager(String path) throws IOException, TokenException {
-        m = Module.getInstance(path);
-        m.initialize(null);
+        setPathModule(path);
     }
 
     public void setPathModule(String path) throws IOException, TokenException {
         m = Module.getInstance(path);
         m.initialize(null);
+        this.path = path;
     }
 
     public Module getModule() {
@@ -276,7 +277,10 @@ public class ModuleManager {
     }
 
     public void end() throws TokenException {
-        m.finalize(null);
+        if (m != null) {
+            m.finalize(null);
+            m = null;
+        }
     }
 }
 

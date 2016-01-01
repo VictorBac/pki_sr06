@@ -8,6 +8,8 @@ import iaik.pkcs.pkcs11.Token;
 import iaik.pkcs.pkcs11.TokenException;
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -33,10 +35,9 @@ public class Window extends Application {
     private VBox root;
     private final int SIZE = 60;
 
-    private Module cryptoModule;
-    private String modulePath;
+    private ModuleManager manager;
 
-    private TextField moduleField;
+    private StringProperty pathProperty;
     private MessageIndicator messageIndicator;
     private Pane functionZone;
     private ListView<Slot> slotsSidebar;
@@ -50,6 +51,18 @@ public class Window extends Application {
     public void start(Stage stage) {
         loadTranslations();
         initUI(stage);
+        manager = new ModuleManager();
+    }
+
+    @Override
+    /* Appelé quand l'application se termine (appel de Platform.exit() ou fermeture de la dernière fenêtre */
+    public void stop() {
+        unloadCurrentModule();
+    }
+
+    public static void main(String[] args) {
+        Window win = new Window();
+        win.launch(args);
     }
 
     private void loadTranslations() {
@@ -66,8 +79,10 @@ public class Window extends Application {
 
         Label label1 = new Label(t_("modulePathLabel"));
 
-        moduleField = new TextField();
+        pathProperty = new SimpleStringProperty();
+        TextField moduleField = new TextField();
         moduleField.promptTextProperty().set(t_("modulePathPlaceholder"));
+        moduleField.textProperty().bindBidirectional(pathProperty);
         moduleField.setOnAction((event) -> loadModule(moduleField.getText()));
         moduleField.prefWidthProperty().bind(root.widthProperty().divide(2));
 
@@ -101,77 +116,6 @@ public class Window extends Application {
         loadModuleButton.requestFocus();
     }
 
-    private EventHandler<ActionEvent> ActionMenuFile() {
-        return event -> {
-            MenuItem mItem = (MenuItem) event.getSource();
-            String side = mItem.getText();
-            if ("Choose Module...".equalsIgnoreCase(side)) {
-                chooseAndLoadModule();
-            } else if ("Charger_Module".equalsIgnoreCase(side)) {
-                System.out.println("right");
-            } else if ("Charger_Module".equalsIgnoreCase(side)) {
-                System.out.println("top");
-            } else if ("Charger_Module".equalsIgnoreCase(side)) {
-                System.out.println("bottom");
-            }
-        };
-    }
-
-    private void loadModule(String path) {
-        try {
-            unloadCurrentModule();
-
-            cryptoModule = Module.getInstance(path);
-            cryptoModule.initialize(null);
-            modulePath = path;
-            moduleField.setText(path);
-
-            slots.addAll(cryptoModule.getSlotList(Module.SlotRequirement.ALL_SLOTS));
-            functions.addAll(new InfoFunction(t_("infoFunction"), cryptoModule), new MechanismsFunction(t_("mechanismsFunction"), cryptoModule));
-
-            Platform.runLater(() -> {
-                if (!slots.isEmpty()) {
-                    slotsSidebar.getSelectionModel().select(0);
-                    functionsSidebar.getSelectionModel().select(0); // select Info
-                }
-            });
-        } catch (IOException e) {
-            messageIndicator.error(t_("moduleOpenIOError"), e.getLocalizedMessage());
-            e.printStackTrace();
-        } catch (TokenException e) {
-            messageIndicator.error(t_("moduleOpenInitError"), e.getLocalizedMessage());
-            e.printStackTrace();
-        }
-    }
-
-    private void unloadCurrentModule() {
-        // sidebars hold references to the module
-        slots.clear();
-        functions.clear();
-
-        if (cryptoModule != null) {
-            try {
-                cryptoModule.finalize(null);
-            } catch (TokenException e) {
-                e.printStackTrace(); // TODO propager aux appelants ?
-            }
-
-            cryptoModule = null;
-        }
-    }
-
-    private void chooseAndLoadModule() {
-        askModule().ifPresent((file) -> loadModule(file.getAbsolutePath()));
-    }
-
-    private Optional<File> askModule() {
-        FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Choose Module Library");
-        fileChooser.getExtensionFilters().addAll(
-                new FileChooser.ExtensionFilter("Module Files", "*.so", "*.dll", "*.dylib"));
-        return Optional.ofNullable(fileChooser.showOpenDialog(root.getScene().getWindow()));
-    }
-
     private MenuBar createMenus() {
         MenuBar menuBar = new MenuBar();
 
@@ -202,36 +146,13 @@ public class Window extends Application {
         return functionZone;
     }
 
-
     private Node getLeftLists() {
         slotsSidebar = new ListView<>();
         slots = FXCollections.observableArrayList();
         slotsSidebar.setItems(slots);
         slotsSidebar.setPlaceholder(new Label(t_("placeholderSlotsSidebar")));
         slotsSidebar.setCellFactory((view) ->
-            new ListCell<Slot>() {
-                @Override
-                protected void updateItem(Slot item, boolean empty) {
-                    super.updateItem(item, empty);
-
-                    if (empty || item == null) {
-                        setText(null);
-                    } else {
-                        // TODO, c'est le bordel
-                        Token token = null;
-                        try {
-                            token = item.getToken();
-                        } catch (TokenException e) {
-                            e.printStackTrace();
-                        }
-                        if (token != null) {
-                            setText(String.format(t_("tokenPresentCell"), item.getSlotID()));
-                        } else {
-                            setText(String.format(t_("noTokenCell"), item.getSlotID()));
-                        }
-                    }
-                }
-            }
+                new SlotListCell()
         );
         slotsSidebar.getSelectionModel().selectedItemProperty().addListener((ob, oldValue, newValue) -> {
             if  (newValue == null) {
@@ -278,14 +199,73 @@ public class Window extends Application {
         return functionsSidebar.getSelectionModel().getSelectedItem();
     }
 
-    @Override
-    /* Appelé quand l'application se termine (appel de Platform.exit() ou fermeture de la dernière fenêtre */
-    public void stop() {
-        unloadCurrentModule();
+    private class SlotListCell extends ListCell<Slot> {
+        @Override
+        protected void updateItem(Slot item, boolean empty) {
+            super.updateItem(item, empty);
+
+            if (empty || item == null) {
+                setText(null);
+            } else {
+                // TODO, c'est le bordel
+                Token token = null;
+                try {
+                    token = item.getToken();
+                } catch (TokenException e) {
+                    e.printStackTrace();
+                }
+                if (token != null) {
+                    setText(String.format(t_("tokenPresentCell"), item.getSlotID()));
+                } else {
+                    setText(String.format(t_("noTokenCell"), item.getSlotID()));
+                }
+            }
+        }
     }
 
-    public static void main(String[] args) {
-        Window win = new Window();
-        win.launch(args);
+
+    private void loadModule(String path) {
+        try {
+            unloadCurrentModule();
+
+            manager.setPathModule(path);
+            pathProperty.set(path);
+
+            slots.setAll(manager.getAllSlots());
+            functions.setAll(new InfoFunction(t_("infoFunction"), manager), new MechanismsFunction(t_("mechanismsFunction"), manager));
+
+            Platform.runLater(() -> { // Select first slot and info function
+                if (!slots.isEmpty()) {
+                    slotsSidebar.getSelectionModel().select(0);
+                    functionsSidebar.getSelectionModel().select(0);
+                }
+            });
+        } catch (IOException e) {
+            messageIndicator.error(t_("moduleOpenIOError"), e.getLocalizedMessage());
+            e.printStackTrace();
+        } catch (TokenException e) {
+            messageIndicator.error(t_("moduleOpenInitError"), e.getLocalizedMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private void unloadCurrentModule() {
+        try {
+            manager.end();
+        } catch (TokenException e) {
+            e.printStackTrace(); // TODO propager aux appelants ?
+        }
+    }
+
+    private void chooseAndLoadModule() {
+        askModule().ifPresent((file) -> loadModule(file.getAbsolutePath()));
+    }
+
+    private Optional<File> askModule() {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Choose Module Library");
+        fileChooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("Module Files", "*.so", "*.dll", "*.dylib"));
+        return Optional.ofNullable(fileChooser.showOpenDialog(root.getScene().getWindow()));
     }
 }

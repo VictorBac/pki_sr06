@@ -11,7 +11,7 @@ import javafx.scene.control.Label;
 public class InfoFunction extends BaseUIFunction {
     private Label ui;
 
-    public InfoFunction(String name, Module cryptoModule) {
+    public InfoFunction(String name, ModuleManager cryptoModule) {
         super(name, cryptoModule);
     }
 

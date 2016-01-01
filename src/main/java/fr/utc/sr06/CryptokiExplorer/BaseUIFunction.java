@@ -7,11 +7,11 @@ import iaik.pkcs.pkcs11.Module;
  */
 public abstract class BaseUIFunction implements UIFunction {
     private final String name;
-    protected final Module cryptoModule;
+    protected final ModuleManager manager;
 
-    public BaseUIFunction(String name, Module cryptoModule) {
+    public BaseUIFunction(String name, ModuleManager manager) {
         this.name = name;
-        this.cryptoModule = cryptoModule;
+        this.manager = manager;
     }
 
     public String getName() {
