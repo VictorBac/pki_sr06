@@ -95,7 +95,7 @@ public class Window extends Application {
         hb.getStyleClass().add("module-path-bar");
         hb.prefHeightProperty().bind(root.heightProperty().divide(12));
         hb.getChildren().addAll(label1, moduleField, loadModuleButton);
-        hb.setAlignment(Pos.CENTER_LEFT);
+        hb.setAlignment(Pos.CENTER);
 
         messageIndicator = new MessageIndicator();
         subroot.setLeft(getLeftLists());
