@@ -2,6 +2,11 @@ group 'fr.utc.sr06'
 version '0.1-SNAPSHOT'
 
 apply plugin: 'java'
+
+compileJava {
+    options.compilerArgs << '-Xlint:unchecked'
+}
+
 apply plugin: 'application'
 
 mainClassName = "fr.utc.sr06.CryptokiExplorer.Main"

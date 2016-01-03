@@ -2,253 +2,471 @@ package fr.utc.sr06.CryptokiExplorer;/**
  * Created by raphael on 23/12/15.
  */
 
+import com.sun.webkit.*;
+import com.sun.webkit.ContextMenu;
+import iaik.pkcs.pkcs11.Module;
+import iaik.pkcs.pkcs11.Slot;
+import iaik.pkcs.pkcs11.Token;
+import iaik.pkcs.pkcs11.TokenException;
 import javafx.application.Application;
-
+import javafx.application.Platform;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
-
 import javafx.event.EventHandler;
+import javafx.fxml.FXMLLoader;
 import javafx.geometry.Pos;
-
+import javafx.scene.Node;
 import javafx.scene.Scene;
-
 import javafx.scene.control.*;
-
 import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
-import javafx.scene.layout.*;
-
-import javafx.scene.text.Font;
-import javafx.scene.text.FontWeight;
-import javafx.scene.text.TextAlignment;
-import javafx.stage.DirectoryChooser;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Pane;
+import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
 import javafx.stage.FileChooser;
+import javafx.stage.Popup;
 import javafx.stage.Stage;
 
 import java.io.File;
-
-class MyLabel extends Label {
-
-    public MyLabel(String text) {
-        super(text);
-
-        setAlignment(Pos.BASELINE_CENTER);
-    }
-}
+import java.io.IOException;
+import java.security.NoSuchAlgorithmException;
+import java.security.spec.InvalidKeySpecException;
+import java.util.*;
 
 public class Window extends Application {
 
-    private BorderPane root;
+    private VBox root;
     private final int SIZE = 60;
+
+    private ModuleManager manager;
+
+    private StringProperty pathProperty;
+    private MessageIndicator messageIndicator;
+    private Pane functionZone;
+    private ListView<Slot> slotsSidebar;
+    private ObservableList<Slot> slots;
+    private ListView<UIFunction> functionsSidebar;
+    private ObservableList<UIFunction> functions;
+
+    private ResourceBundle translations;
 
     @Override
     public void start(Stage stage) {
 
-
+        loadTranslations();
         initUI(stage);
+        manager = new ModuleManager();
+    }
+
+    @Override
+    /* Appelé quand l'application se termine (appel de Platform.exit() ou fermeture de la dernière fenêtre */
+    public void stop() {
+        unloadCurrentModule();
+    }
+
+    public static void main(String[] args) {
+        Window win = new Window();
+        win.launch(args);
+    }
+
+    private void loadTranslations() {
+        translations = ResourceBundle.getBundle("translations/main", Locale.getDefault());
+    }
+
+    private String t_(String key) {
+        return translations.getString(key);
     }
 
     private void initUI(Stage stage) {
-
-        root = new BorderPane();
+        root = new VBox();
         BorderPane subroot = new BorderPane();
 
+        Label label1 = new Label(t_("modulePathLabel"));
 
-        Label label1 = new Label("Module chargé:");
-        TextField textField = new TextField ("./");
-        textField.prefWidthProperty().bind(root.widthProperty().divide(2));
+        pathProperty = new SimpleStringProperty();
+        TextField moduleField = new TextField();
+        moduleField.promptTextProperty().set(t_("modulePathPlaceholder"));
+        moduleField.textProperty().bindBidirectional(pathProperty);
+        moduleField.setOnAction((event) -> loadModule(moduleField.getText()));
+        moduleField.prefWidthProperty().bind(root.widthProperty().divide(2));
+
+        Button loadModuleButton = new Button();
+        loadModuleButton.setText(t_("chooseModuleButton"));
+        loadModuleButton.setOnAction((event) -> chooseAndLoadModule());
 
         HBox hb = new HBox();
+        hb.getStyleClass().add("module-path-bar");
         hb.prefHeightProperty().bind(root.heightProperty().divide(12));
-        hb.getChildren().addAll(label1, textField);
-        hb.setSpacing(10);
+        hb.getChildren().addAll(label1, moduleField, loadModuleButton);
+        hb.setAlignment(Pos.CENTER);
 
-        hb.setAlignment(Pos.CENTER_LEFT);
+        messageIndicator = new MessageIndicator();
+        subroot.setLeft(getLeftLists());
+        subroot.setCenter(getFunctionZone());
 
+        MenuBar menuBar = createMenus();
+        root.getChildren().addAll(menuBar, hb, messageIndicator, subroot);
+
+
+        Scene scene = new Scene(root, 1000 , 800);
+        scene.getStylesheets().add("css/stylesheet.css");
+
+        stage.getIcons().add(new Image("css/key-xxl.png"));
+
+        stage.setTitle(t_("mainWindowTitle"));
+        stage.setScene(scene);
+        stage.show();
+
+        loadModuleButton.requestFocus();
+    }
+
+    private MenuBar createMenus() {
         MenuBar menuBar = new MenuBar();
 
-        Menu menuFile = new Menu("File");
+        Menu menuFile = new Menu(t_("fileMenu"));
 
-        MenuItem module = new MenuItem("Charger_Module");
-        module.setOnAction(ActionMenuFile(textField));
-        menuFile.getItems().add(module);
+        MenuItem module = new MenuItem(t_("chooseModuleButton"));
+        module.setOnAction((event) -> chooseAndLoadModule());
 
+        MenuItem quit = new MenuItem(t_("quitMenuItem"));
+        quit.setOnAction((event) -> Platform.exit());
+
+        menuFile.getItems().addAll(module, quit);
 
         Menu menuEdit = new Menu("Edit");
+
+         MenuItem CreateToken = new MenuItem("CreateToken");
+        CreateToken.setOnAction((event) -> CreateToken());
+
+        MenuItem InitToken = new MenuItem("InitToken");
+        InitToken.setOnAction((event) -> InitTokenM());
+
+
+        MenuItem editPIN = new MenuItem("EDIT PIN");
+        editPIN.setOnAction((event) -> EditPIN());
+
+
+
+        MenuItem editSOPIN = new MenuItem("EDIT SOPIN");
+        editSOPIN.setOnAction((event) -> EditPIN());
+
+
+        menuEdit.getItems().addAll(CreateToken,InitToken,editPIN,editSOPIN);
+
 
         Menu menuView = new Menu("View");
 
         menuBar.getMenus().addAll(menuFile, menuEdit, menuView);
 
-
-
-
-        root.setTop(menuBar);
-        root.setCenter(subroot);
-        root.setLeft(getLeftLabel());
-        subroot.setTop(hb);
-
-        // root.setTop(getTopChoice());
-        root.setBottom(getBottomLabel());
-        subroot.setLeft(getLeftListview());
-        subroot.setRight(getRightLabel());
-        subroot.setCenter(getCenterAreaText());
-
-        Scene scene = new Scene(root, 1000 , 800);
-        scene.getStylesheets().add("fr/utc/sr06/CryptokiExplorer/css/stylesheet.css");
-
-        stage.getIcons().add(new Image("fr/utc/sr06/CryptokiExplorer/css/key-xxl.png"));
-
-
-        stage.setTitle("BorderPane");
-        stage.setScene(scene);
-        stage.show();
-
-
+        return menuBar;
     }
 
-    private EventHandler<ActionEvent> ActionMenuFile(final TextField arg) {
-        return new EventHandler<ActionEvent>() {
+    private Pane getFunctionZone() {
+        functionZone = new HBox();
+        functionZone.setPrefWidth(SIZE);
+        functionZone.prefHeightProperty().bind(root.heightProperty().subtract(100));
 
-            public void handle(ActionEvent event) {
-                MenuItem mItem = (MenuItem) event.getSource();
-                String side = mItem.getText();
-                if ("Charger_Module".equalsIgnoreCase(side)) {
+        return functionZone;
+    }
 
-                    FileChooser fileChooser = new FileChooser();
-                    fileChooser.setTitle("Open Resource File");
-                    fileChooser.getExtensionFilters().addAll(
-                            new FileChooser.ExtensionFilter("Module Files", "*.so"));
-                    File selectedFile = fileChooser.showOpenDialog(root.getScene().getWindow());
-                    if (selectedFile != null) {
-                            arg.setText(selectedFile.getAbsolutePath());
-                    }
+    private Node getLeftLists() {
+        slotsSidebar = new ListView<>();
+        slots = FXCollections.observableArrayList();
+        slotsSidebar.setItems(slots);
+        slotsSidebar.setPlaceholder(new Label(t_("placeholderSlotsSidebar")));
+        slotsSidebar.setCellFactory((view) ->
+                new SlotListCell()
+        );
+        slotsSidebar.getSelectionModel().selectedItemProperty().addListener((ob, oldValue, newValue) -> {
+            if  (newValue == null) {
+                return;
+            }
 
+            UIFunction function = getCurrentFunction();
+            if  (function != null) {
+                function.unload();
+                function.load(newValue);
+                functionZone.getChildren().setAll(function.getUI());
+            }
+        });
 
-                } else if ("Charger_Module".equalsIgnoreCase(side)) {
-                    System.out.println("right");
-                } else if ("Charger_Module".equalsIgnoreCase(side)) {
-                    System.out.println("top");
-                } else if ("Charger_Module".equalsIgnoreCase(side)) {
-                    System.out.println("bottom");
+        functionsSidebar = new ListView<>();
+        functionsSidebar.prefWidthProperty().bind(root.widthProperty().divide(5));
+        functionsSidebar.prefHeightProperty().bind(root.heightProperty().divide(3));
+        functionsSidebar.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue == null) {
+                return;
+            }
+
+            newValue.load(getCurrentSlot());
+            functionZone.getChildren().setAll(newValue.getUI());
+
+            if (oldValue != null) {
+                oldValue.unload();
+            }
+        });
+        functions = FXCollections.observableArrayList();
+        functionsSidebar.setItems(functions);
+        functionsSidebar.setPlaceholder(new Label(t_("placeholderFunctionsSidebar")));
+
+        VBox box = new VBox();
+        box.getChildren().addAll(slotsSidebar, functionsSidebar);
+        return box;
+    }
+
+    private Slot getCurrentSlot() {
+        return slotsSidebar.getSelectionModel().getSelectedItem();
+    }
+
+    private UIFunction getCurrentFunction() {
+        return functionsSidebar.getSelectionModel().getSelectedItem();
+    }
+
+    private class SlotListCell extends ListCell<Slot> {
+        @Override
+        protected void updateItem(Slot item, boolean empty) {
+            super.updateItem(item, empty);
+
+            if (empty || item == null) {
+                setText(null);
+            } else {
+                // TODO, c'est le bordel
+                Token token = null;
+                try {
+                    token = item.getToken();
+                } catch (TokenException e) {
+                    e.printStackTrace();
+                }
+                if (token != null) {
+                    setText(String.format(t_("tokenPresentCell"), item.getSlotID()));
+                } else {
+                    setText(String.format(t_("noTokenCell"), item.getSlotID()));
                 }
             }
-        };
+        }
     }
 
 
-    private Label getTopLabel() {
+    private void loadModule(String path) {
+        try {
+            unloadCurrentModule();
 
+            manager.setPathModule(path);
+            pathProperty.set(path);
 
+            slots.setAll(manager.getAllSlots());
+            functions.setAll(new InfoFunction(t_("infoFunction"), manager), new MechanismsFunction(t_("mechanismsFunction"), manager));
 
-        Label lbl = new MyLabel("Top");
-        lbl.setPrefHeight(SIZE);
-        lbl.prefWidthProperty().bind(root.widthProperty());
-        lbl.setStyle("-fx-border-style: dotted; -fx-border-width: 0 0 1 0;"
-                + "-fx-border-color: gray; -fx-font-weight: bold");
-
-        return lbl;
+            Platform.runLater(() -> { // Select first slot and info function
+                if (!slots.isEmpty()) {
+                    slotsSidebar.getSelectionModel().select(0);
+                    functionsSidebar.getSelectionModel().select(0);
+                }
+            });
+        } catch (IOException e) {
+            messageIndicator.error(t_("moduleOpenIOError"), e.getLocalizedMessage());
+            e.printStackTrace();
+        } catch (TokenException e) {
+            messageIndicator.error(t_("moduleOpenInitError"), e.getLocalizedMessage());
+            e.printStackTrace();
+        }
     }
 
-    private ChoiceBox getTopChoice() {
+    private void unloadCurrentModule() {
+        try {
+            manager.end();
+        } catch (TokenException e) {
+            e.printStackTrace(); // TODO propager aux appelants ?
+        }
+    }
+
+    private void chooseAndLoadModule() {
+        askModule().ifPresent((file) -> loadModule(file.getAbsolutePath()));
+    }
+
+    private Optional<File> askModule() {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Choose Module Library");
+        fileChooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("Module Files", "*.so", "*.dll", "*.dylib"));
+        return Optional.ofNullable(fileChooser.showOpenDialog(root.getScene().getWindow()));
+    }
+
+    private void CreateToken() {
+
+        VBox InitTokenWin= new VBox();
+
+        Stage stage1 = new Stage();
+        stage1.setTitle("Initialize Token");
+        stage1.setScene(new Scene(InitTokenWin, 300, 200));
+        stage1.getScene().getStylesheets().add("css/stylesheet.css");
+        TextField AskLabel = new TextField();
+        Label labelLab = new Label("Label:");
+
+        HBox hbLab = new HBox();
+        hbLab.getChildren().addAll(labelLab, AskLabel);
+        hbLab.setAlignment(Pos.CENTER);
+        TextField AskSOPIN = new TextField();
+        Label labelSOPIN = new Label("SOPIN:");
+
+        HBox hbSOPIN = new HBox();
+        hbSOPIN.getChildren().addAll(labelSOPIN, AskSOPIN);
+        hbSOPIN.setAlignment(Pos.CENTER);
+
+        TextField AskPIN = new TextField();
+        Label labelPIN = new Label("PIN:");
+
+        HBox hbPIN = new HBox();
+        hbPIN.getChildren().addAll(labelPIN, AskPIN);
+        hbPIN.setAlignment(Pos.CENTER);
+
+        Button Cancel = new Button();
+        Cancel.setText("Cancel");
+        Cancel.setOnAction((event) -> stage1.hide());
 
 
-        ChoiceBox cb = new ChoiceBox();
-        cb.setItems(FXCollections.observableArrayList(
-                "New Document", "Open ",
-                new Separator(), "Save", "Save as")
+        Button Initialize = new Button();
+        Initialize.setText("Create");
+        Initialize.setOnAction((event) ->{
+
+            String LABELl = AskLabel.getText();
+            String PINl = AskPIN.getText();
+            String SOPINl = AskSOPIN.getText();
+            try {
+                manager.createToken(LABELl,SOPINl,PINl);
+            } catch (TokenException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (InvalidKeySpecException e) {
+                e.printStackTrace();
+            } catch (NoSuchAlgorithmException e) {
+                e.printStackTrace();
+            }
+              stage1.hide();
+
+        });
+
+        HBox hbBUT = new HBox();
+        hbBUT.getChildren().addAll(Cancel, Initialize);
+        hbBUT.setAlignment(Pos.CENTER);
+
+
+        InitTokenWin.getChildren().addAll(hbLab,hbSOPIN,hbPIN,hbBUT);
+        stage1.show();
+
+
+    }
+    private void InitTokenM() {
+        Slot item = getCurrentSlot();
+        Label labelToken = null;
+        Label PINinit = null;
+
+        try {
+            labelToken = new Label("Token Label: " + item.getToken().getTokenInfo().getLabel());
+            PINinit = new Label("Token initialized: " + item.getToken().getTokenInfo().isTokenInitialized());
+        } catch (TokenException e) {
+            e.printStackTrace();
+        }
+        VBox EditPinWind= new VBox();
+        Stage stage1 = new Stage();
+        stage1.setTitle("Change PIN");
+        stage1.setScene(new Scene(EditPinWind, 300, 200));
+        stage1.getScene().getStylesheets().add("css/stylesheet.css");
+
+        TextField AskLabel = new TextField();
+        Label labelLab = new Label("Label:");
+
+        HBox hbLab = new HBox();
+        hbLab.getChildren().addAll(labelLab, AskLabel);
+        hbLab.setAlignment(Pos.CENTER);
+
+        TextField AskPIN = new TextField();
+        Label labelPIN = new Label("PIN:");
+
+        HBox hbPIN = new HBox();
+        hbPIN.getChildren().addAll(labelPIN, AskPIN);
+        hbPIN.setAlignment(Pos.CENTER);
+
+        Button Cancel = new Button();
+        Cancel.setText("Cancel");
+        Cancel.setOnAction((event) -> stage1.hide());
+
+        Button Change = new Button();
+        Change.setText("Change");
+        Change.setOnAction((event) -> {
+
+            try {
+                item.getToken().initToken(AskPIN.getText().toCharArray(),AskLabel.getText());
+            } catch (TokenException e) {
+                e.printStackTrace();
+            }
+
+            stage1.hide();}
+
+
         );
 
-        return cb;
+        HBox hbBUT = new HBox();
+        hbBUT.getChildren().addAll(Cancel, Change);
+        hbBUT.setAlignment(Pos.CENTER);
+
+
+        EditPinWind.getChildren().addAll(labelToken,PINinit,hbLab,hbPIN,hbBUT);
+        stage1.show();
+    }
+    private void EditPIN() {
+        Slot item = getCurrentSlot();
+        Label labelToken = null;
+        Label PINinit = null;
+        try {
+            labelToken = new Label("Token Label: " + item.getToken().getTokenInfo().getLabel());
+            PINinit = new Label("Token initialized: " + item.getToken().getTokenInfo().isTokenInitialized());
+        } catch (TokenException e) {
+            e.printStackTrace();
+        }
+        VBox EditPinWind= new VBox();
+        Stage stage1 = new Stage();
+        stage1.setTitle("Change PIN");
+        stage1.setScene(new Scene(EditPinWind, 300, 200));
+        stage1.getScene().getStylesheets().add("css/stylesheet.css");
+        TextField AskPIN = new TextField();
+        Label labelLab = new Label("PIN:");
+
+        HBox hbPIN = new HBox();
+        hbPIN.getChildren().addAll(labelLab, AskPIN);
+        hbPIN.setAlignment(Pos.CENTER);
+        TextField AskSOPIN = new TextField();
+        Label labelSOPIN = new Label("SOPIN:");
+
+        Button Cancel = new Button();
+        Cancel.setText("Cancel");
+        Cancel.setOnAction((event) -> stage1.hide());
+
+        Button Change = new Button();
+        Change.setText("Change");
+        Change.setOnAction((event) -> {
+
+
+
+            stage1.hide();}
+
+
+        );
+
+        HBox hbBUT = new HBox();
+        hbBUT.getChildren().addAll(Cancel, Change);
+        hbBUT.setAlignment(Pos.CENTER);
+
+
+        EditPinWind.getChildren().addAll(labelToken,PINinit,hbPIN,hbBUT);
+        stage1.show();
+    }
 
     }
 
-
-    private HBox getTopBox() {
-
-        Label label1 = new Label("Module chargé:");
-        TextField textField = new TextField ("./");
-        textField.prefWidthProperty().bind(root.widthProperty().divide(2));
-
-        HBox hb = new HBox();
-        hb.prefHeightProperty().bind(root.heightProperty().divide(12));
-        hb.getChildren().addAll(label1, textField);
-        hb.setSpacing(10);
-
-        hb.setAlignment(Pos.CENTER_LEFT);
-        return hb;
-    }
-    private Label getBottomLabel() {
-
-        Label lbl = new MyLabel("Bottom");
-        lbl.setPrefHeight(SIZE);
-        lbl.prefWidthProperty().bind(root.widthProperty());
-        //lbl.setStyle("-fx-border-style: dotted; -fx-border-width: 1 0 0 0;"
-        //        + "-fx-border-color: gray; -fx-font-weight: bold");
-
-        return lbl;
-    }
-
-    private Label getLeftLabel() {
-
-        Label lbl = new MyLabel("Left");
-        lbl.setPrefWidth(SIZE);
-        lbl.prefHeightProperty().bind(root.widthProperty());
-        return lbl;
-    }
-
-
-    private TextArea getCenterAreaText() {
-
-        TextArea lbl = new TextArea("Left");
-        lbl.setPrefWidth(SIZE);
-        lbl.prefHeightProperty().bind(root.heightProperty().subtract(100));
-
-        return lbl;
-    }
-
-
-    private ListView getLeftListview() {
-
-        ListView<String> list = new ListView<String>();
-        list.prefWidthProperty().bind(root.widthProperty().divide(5));
-        list.prefHeightProperty().bind(root.heightProperty().divide(3));
-        ObservableList<String> items =FXCollections.observableArrayList (
-                "Single", "Double", "Suite", "Family App");
-        list.setItems(items);
-
-        return list;
-    }
-
-
-    private Label getRightLabel() {
-
-        Label lbl = new MyLabel("Right");
-        lbl.setPrefWidth(SIZE);
-        lbl.prefHeightProperty().bind(root.heightProperty().subtract(2*SIZE));
-       // lbl.setStyle("-fx-border-style: dotted; -fx-border-width: 0 0 0 1;"
-        //        + "-fx-border-color: gray; -fx-font-weight: bold");
-
-        return lbl;
-    }
-
-    private Label getCenterLabel() {
-
-        Label lbl = new MyLabel("Center");
-        lbl.setStyle("-fx-font-weight: bold");
-        lbl.prefHeightProperty().bind(root.heightProperty().subtract(2*SIZE));
-        lbl.prefWidthProperty().bind(root.widthProperty().subtract(2*SIZE));
-
-        return lbl;
-    }
-
-    public static void main(String[] args) {
-
-
-        launch(args);
-    }
-
-
-
-}
