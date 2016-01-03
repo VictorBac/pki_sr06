@@ -2,6 +2,8 @@ package fr.utc.sr06.CryptokiExplorer;/**
  * Created by raphael on 23/12/15.
  */
 
+import com.sun.webkit.*;
+import com.sun.webkit.ContextMenu;
 import iaik.pkcs.pkcs11.Module;
 import iaik.pkcs.pkcs11.Slot;
 import iaik.pkcs.pkcs11.Token;
@@ -14,6 +16,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.fxml.FXMLLoader;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
@@ -23,11 +26,16 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
 import javafx.stage.FileChooser;
+import javafx.stage.Popup;
 import javafx.stage.Stage;
 
 import java.io.File;
 import java.io.IOException;
+import java.security.NoSuchAlgorithmException;
+import java.security.spec.InvalidKeySpecException;
 import java.util.*;
 
 public class Window extends Application {
@@ -131,6 +139,25 @@ public class Window extends Application {
         menuFile.getItems().addAll(module, quit);
 
         Menu menuEdit = new Menu("Edit");
+
+         MenuItem CreateToken = new MenuItem("CreateToken");
+        CreateToken.setOnAction((event) -> CreateToken());
+
+        MenuItem InitToken = new MenuItem("InitToken");
+        InitToken.setOnAction((event) -> InitTokenM());
+
+
+        MenuItem editPIN = new MenuItem("EDIT PIN");
+        editPIN.setOnAction((event) -> EditPIN());
+
+
+
+        MenuItem editSOPIN = new MenuItem("EDIT SOPIN");
+        editSOPIN.setOnAction((event) -> EditPIN());
+
+
+        menuEdit.getItems().addAll(CreateToken,InitToken,editPIN,editSOPIN);
+
 
         Menu menuView = new Menu("View");
 
@@ -269,4 +296,177 @@ public class Window extends Application {
                 new FileChooser.ExtensionFilter("Module Files", "*.so", "*.dll", "*.dylib"));
         return Optional.ofNullable(fileChooser.showOpenDialog(root.getScene().getWindow()));
     }
-}
+
+    private void CreateToken() {
+
+        VBox InitTokenWin= new VBox();
+
+        Stage stage1 = new Stage();
+        stage1.setTitle("Initialize Token");
+        stage1.setScene(new Scene(InitTokenWin, 300, 200));
+        stage1.getScene().getStylesheets().add("css/stylesheet.css");
+        TextField AskLabel = new TextField();
+        Label labelLab = new Label("Label:");
+
+        HBox hbLab = new HBox();
+        hbLab.getChildren().addAll(labelLab, AskLabel);
+        hbLab.setAlignment(Pos.CENTER);
+        TextField AskSOPIN = new TextField();
+        Label labelSOPIN = new Label("SOPIN:");
+
+        HBox hbSOPIN = new HBox();
+        hbSOPIN.getChildren().addAll(labelSOPIN, AskSOPIN);
+        hbSOPIN.setAlignment(Pos.CENTER);
+
+        TextField AskPIN = new TextField();
+        Label labelPIN = new Label("PIN:");
+
+        HBox hbPIN = new HBox();
+        hbPIN.getChildren().addAll(labelPIN, AskPIN);
+        hbPIN.setAlignment(Pos.CENTER);
+
+        Button Cancel = new Button();
+        Cancel.setText("Cancel");
+        Cancel.setOnAction((event) -> stage1.hide());
+
+
+        Button Initialize = new Button();
+        Initialize.setText("Create");
+        Initialize.setOnAction((event) ->{
+
+            String LABELl = AskLabel.getText();
+            String PINl = AskPIN.getText();
+            String SOPINl = AskSOPIN.getText();
+            try {
+                manager.createToken(LABELl,SOPINl,PINl);
+            } catch (TokenException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (InvalidKeySpecException e) {
+                e.printStackTrace();
+            } catch (NoSuchAlgorithmException e) {
+                e.printStackTrace();
+            }
+              stage1.hide();
+
+        });
+
+        HBox hbBUT = new HBox();
+        hbBUT.getChildren().addAll(Cancel, Initialize);
+        hbBUT.setAlignment(Pos.CENTER);
+
+
+        InitTokenWin.getChildren().addAll(hbLab,hbSOPIN,hbPIN,hbBUT);
+        stage1.show();
+
+
+    }
+    private void InitTokenM() {
+        Slot item = getCurrentSlot();
+        Label labelToken = null;
+        Label PINinit = null;
+
+        try {
+            labelToken = new Label("Token Label: " + item.getToken().getTokenInfo().getLabel());
+            PINinit = new Label("Token initialized: " + item.getToken().getTokenInfo().isTokenInitialized());
+        } catch (TokenException e) {
+            e.printStackTrace();
+        }
+        VBox EditPinWind= new VBox();
+        Stage stage1 = new Stage();
+        stage1.setTitle("Change PIN");
+        stage1.setScene(new Scene(EditPinWind, 300, 200));
+        stage1.getScene().getStylesheets().add("css/stylesheet.css");
+
+        TextField AskLabel = new TextField();
+        Label labelLab = new Label("Label:");
+
+        HBox hbLab = new HBox();
+        hbLab.getChildren().addAll(labelLab, AskLabel);
+        hbLab.setAlignment(Pos.CENTER);
+
+        TextField AskPIN = new TextField();
+        Label labelPIN = new Label("PIN:");
+
+        HBox hbPIN = new HBox();
+        hbPIN.getChildren().addAll(labelPIN, AskPIN);
+        hbPIN.setAlignment(Pos.CENTER);
+
+        Button Cancel = new Button();
+        Cancel.setText("Cancel");
+        Cancel.setOnAction((event) -> stage1.hide());
+
+        Button Change = new Button();
+        Change.setText("Change");
+        Change.setOnAction((event) -> {
+
+            try {
+                item.getToken().initToken(AskPIN.getText().toCharArray(),AskLabel.getText());
+            } catch (TokenException e) {
+                e.printStackTrace();
+            }
+
+            stage1.hide();}
+
+
+        );
+
+        HBox hbBUT = new HBox();
+        hbBUT.getChildren().addAll(Cancel, Change);
+        hbBUT.setAlignment(Pos.CENTER);
+
+
+        EditPinWind.getChildren().addAll(labelToken,PINinit,hbLab,hbPIN,hbBUT);
+        stage1.show();
+    }
+    private void EditPIN() {
+        Slot item = getCurrentSlot();
+        Label labelToken = null;
+        Label PINinit = null;
+        try {
+            labelToken = new Label("Token Label: " + item.getToken().getTokenInfo().getLabel());
+            PINinit = new Label("Token initialized: " + item.getToken().getTokenInfo().isTokenInitialized());
+        } catch (TokenException e) {
+            e.printStackTrace();
+        }
+        VBox EditPinWind= new VBox();
+        Stage stage1 = new Stage();
+        stage1.setTitle("Change PIN");
+        stage1.setScene(new Scene(EditPinWind, 300, 200));
+        stage1.getScene().getStylesheets().add("css/stylesheet.css");
+        TextField AskPIN = new TextField();
+        Label labelLab = new Label("PIN:");
+
+        HBox hbPIN = new HBox();
+        hbPIN.getChildren().addAll(labelLab, AskPIN);
+        hbPIN.setAlignment(Pos.CENTER);
+        TextField AskSOPIN = new TextField();
+        Label labelSOPIN = new Label("SOPIN:");
+
+        Button Cancel = new Button();
+        Cancel.setText("Cancel");
+        Cancel.setOnAction((event) -> stage1.hide());
+
+        Button Change = new Button();
+        Change.setText("Change");
+        Change.setOnAction((event) -> {
+
+
+
+            stage1.hide();}
+
+
+        );
+
+        HBox hbBUT = new HBox();
+        hbBUT.getChildren().addAll(Cancel, Change);
+        hbBUT.setAlignment(Pos.CENTER);
+
+
+        EditPinWind.getChildren().addAll(labelToken,PINinit,hbPIN,hbBUT);
+        stage1.show();
+    }
+
+    }
+
