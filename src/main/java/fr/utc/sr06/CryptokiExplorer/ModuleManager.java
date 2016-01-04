@@ -16,9 +16,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.RSAPublicKeySpec;
 import java.security.spec.X509EncodedKeySpec;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Random;
+import java.util.*;
 
 /**
  * Created by victor on 31/12/15.
@@ -274,6 +272,25 @@ public class ModuleManager {
         session2.closeSession();
         //m.finalize(null);
 
+    }
+
+    public List<Object> availableObjects (Token tok) throws TokenException {
+        List<Object> obj=new ArrayList<>();
+        char[] mdp={'1','2','3','4'};
+        Session sessionObj = tok.openSession(Token.SessionType.SERIAL_SESSION, Token.SessionReadWriteBehavior.RW_SESSION, null, null);
+        sessionObj.login(Session.UserType.USER, mdp);
+        sessionObj.findObjectsInit(null);
+        Object[] objTok=sessionObj.findObjects(1);
+
+        while (objTok.length!=0){ //il reste des objets non listés
+            obj.add(objTok[0]);
+            System.out.println(objTok[0].toString());
+            objTok=sessionObj.findObjects(1);
+        }
+        sessionObj.findObjectsFinal();
+        sessionObj.logout();
+        sessionObj.closeSession();
+        return  obj;
     }
 
     public void end() throws TokenException {
