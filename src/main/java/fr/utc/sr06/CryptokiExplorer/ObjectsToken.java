@@ -38,6 +38,9 @@ public class ObjectsToken extends BaseUIFunction {
         translations = ResourceBundle.getBundle("translations/object", Locale.getDefault());
     }
 
+    private String t_(String key) {
+        return translations.getString(key);
+    }
 
     @Override
     public void load(Slot slot) {
@@ -45,9 +48,9 @@ public class ObjectsToken extends BaseUIFunction {
 
         HBox pinBar = new HBox();
         pinBar.getStyleClass().add("pin-bar");
-        Label pinLabel = new Label("PIN");
+        Label pinLabel = new Label(t_("pinLabel"));
         PasswordField pinInput = new PasswordField();
-        Button loadButton = new Button("Get private objets");
+        Button loadButton = new Button(t_("loadPrivateButton"));
         pinBar.getChildren().setAll(pinLabel, pinInput, loadButton);
         pinBar.setHgrow(pinInput, Priority.ALWAYS);
 
@@ -80,14 +83,13 @@ public class ObjectsToken extends BaseUIFunction {
         pinInput.setOnAction((event) -> loadObjets(pinInput.getText(), slot, pinBar, messageLabel, description));
         loadButton.setOnMouseClicked((event) -> loadObjets(pinInput.getText(), slot, pinBar, messageLabel, description));
 
-
         try {
             Token token = slot.getToken();
             if (token != null) {
                 obj1.setAll(manager.availableObjects(token));
 
                 if (obj1.isEmpty()) {
-                    messageLabel.setText("No public objects found on this token.");
+                    messageLabel.setText(t_("noPublicObjects"));
                     ui.getChildren().setAll(pinBar, messageLabel);
                 } else {
                     ui.getChildren().setAll(pinBar, select, description);
@@ -107,8 +109,10 @@ public class ObjectsToken extends BaseUIFunction {
             if (token != null) {
                 obj1.setAll(manager.availableObjects(token, pin));
 
+                System.out.println("Objects: " + obj1.size());
+
                 if (obj1.isEmpty()) {
-                    messageLabel.setText("No objects found on this token.");
+                    messageLabel.setText(t_("noObjects"));
                     ui.getChildren().setAll(pinBar, messageLabel);
                 } else {
                     ui.getChildren().setAll(pinBar, select, description);
@@ -120,8 +124,11 @@ public class ObjectsToken extends BaseUIFunction {
             }
         } catch (TokenException e) {
             if (e.getMessage().equals("CKR_PIN_INCORRECT")) {
-                messageLabel.setText("Wrong pin.");
+                messageLabel.setText(t_("wrongPin"));
                 ui.getChildren().setAll(pinBar, messageLabel);
+            } else {
+
+                e.printStackTrace();
             }
         }
     }
