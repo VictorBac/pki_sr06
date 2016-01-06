@@ -285,11 +285,8 @@ public class ModuleManager {
 
     }
 
-    public List<Object> availableObjects (Token tok) throws TokenException {
-        List<Object> obj=new ArrayList<>();
-        char[] mdp={'1','2','3','4'};
-        Session sessionObj = tok.openSession(Token.SessionType.SERIAL_SESSION, Token.SessionReadWriteBehavior.RW_SESSION, null, null);
-        sessionObj.login(Session.UserType.USER, mdp);
+    private List<Object> listObjects(Session sessionObj) throws TokenException {
+        List<Object> obj = new ArrayList<>();
         sessionObj.findObjectsInit(null);
         Object[] objTok=sessionObj.findObjects(1);
 
@@ -299,8 +296,28 @@ public class ModuleManager {
             objTok=sessionObj.findObjects(1);
         }
         sessionObj.findObjectsFinal();
+        return  obj;
+    }
+
+    public List<Object> availableObjects (Token tok) throws TokenException {
+        Session sessionObj = tok.openSession(Token.SessionType.SERIAL_SESSION, Token.SessionReadWriteBehavior.RW_SESSION, null, null);
+        List<Object> obj = listObjects(sessionObj);
+        sessionObj.closeSession();
+        return obj;
+    }
+
+    public List<Object> availableObjects (Token tok, String pin) throws TokenException {
+        List<Object> obj = availableObjects(tok);
+
+        char[] mdp = pin.toCharArray();
+        Session sessionObj = tok.openSession(Token.SessionType.SERIAL_SESSION, Token.SessionReadWriteBehavior.RW_SESSION, null, null);
+        sessionObj.login(Session.UserType.USER, mdp);
+
+        obj.addAll(listObjects(sessionObj));
+
         sessionObj.logout();
         sessionObj.closeSession();
+
         return  obj;
     }
 

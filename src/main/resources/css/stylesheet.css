@@ -151,3 +151,7 @@
 .module-path-bar {
     -fx-spacing: 10px;
 }
+
+.pin-bar {
+    -fx-spacing: 10px;
+}

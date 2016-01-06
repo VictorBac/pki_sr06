@@ -1,7 +1,6 @@
 package fr.utc.sr06.CryptokiExplorer;
 
-import iaik.pkcs.pkcs11.Module;
-import iaik.pkcs.pkcs11.Slot;
+import iaik.pkcs.pkcs11.*;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 
@@ -17,7 +16,28 @@ public class InfoFunction extends BaseUIFunction {
 
     @Override
     public void load(Slot slot) {
-        ui = new Label(String.format("Slot n°%s", slot.getSlotID()));
+        String description = String.format("Slot n°%s", slot.getSlotID());
+
+        try {
+            SlotInfo info = slot.getSlotInfo();
+            description += String.format("\nDescription: ", info.getSlotDescription());
+
+            Token tok = slot.getToken();
+
+            description = info.toString();
+
+            if (tok != null) {
+                TokenInfo tokInfo = tok.getTokenInfo();
+
+                description += "\n\nToken present:\n" + tokInfo.toString();
+
+                //description += String.format("\n\n", tokInfo.getLabel());
+            }
+        } catch (TokenException e) {
+            e.printStackTrace();
+        }
+
+        ui = new Label(description);
     }
 
     @Override

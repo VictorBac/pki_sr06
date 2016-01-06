@@ -228,19 +228,19 @@ public class Window extends Application {
             if (empty || item == null) {
                 setText(null);
             } else {
-                // TODO, c'est le bordel
-                Token token = null;
                 try {
-                    token = item.getToken();
+                    Token token = item.getToken();
+
+                    String description = item.getSlotInfo().getSlotDescription().trim();
+                    if (token != null) {
+                        setText(String.format(t_("tokenPresentCell"), description));
+                    } else {
+                        setText(String.format(t_("noTokenCell"), description));
+                    }
                 } catch (TokenException e) {
                     e.printStackTrace();
                     showDialog(e.toString());
-
-                }
-                if (token != null) {
-                    setText(String.format(t_("tokenPresentCell"), item.getSlotID()));
-                } else {
-                    setText(String.format(t_("noTokenCell"), item.getSlotID()));
+                    setText(null);
                 }
             }
         }
