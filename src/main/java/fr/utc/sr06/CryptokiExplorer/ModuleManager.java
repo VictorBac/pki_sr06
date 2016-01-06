@@ -5,9 +5,7 @@ import iaik.pkcs.pkcs11.objects.KeyPair;
 import iaik.pkcs.pkcs11.objects.Object;
 import iaik.pkcs.pkcs11.objects.RSAPrivateKey;
 import iaik.pkcs.pkcs11.objects.RSAPublicKey;
-import iaik.pkcs.pkcs11.wrapper.Functions;
-import iaik.pkcs.pkcs11.wrapper.PKCS11Constants;
-import iaik.pkcs.pkcs11.wrapper.PKCS11Implementation;
+import iaik.pkcs.pkcs11.wrapper.*;
 
 import java.io.IOException;
 import java.math.BigInteger;
@@ -101,6 +99,9 @@ public class ModuleManager {
         session.closeSession();
         System.out.println("Pin changed");
     }
+
+
+
 
 
     public void createRsaPairKey(Token tok, String userPin) throws TokenException, NoSuchAlgorithmException, InvalidKeySpecException {
@@ -292,6 +293,12 @@ public class ModuleManager {
         sessionObj.closeSession();
         return  obj;
     }
+
+
+    public void wrapkeys () throws TokenException {
+
+    }
+
 
     public void end() throws TokenException {
         if (m != null) {

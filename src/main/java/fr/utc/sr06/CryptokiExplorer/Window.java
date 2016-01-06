@@ -17,18 +17,18 @@ import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXMLLoader;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Pane;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
+import javafx.scene.text.Text;
 import javafx.stage.FileChooser;
+import javafx.stage.Modality;
 import javafx.stage.Popup;
 import javafx.stage.Stage;
 
@@ -241,6 +241,8 @@ public class Window extends Application {
                     token = item.getToken();
                 } catch (TokenException e) {
                     e.printStackTrace();
+                    showDialog(e.toString());
+
                 }
                 if (token != null) {
                     setText(String.format(t_("tokenPresentCell"), item.getSlotID()));
@@ -271,9 +273,13 @@ public class Window extends Application {
         } catch (IOException e) {
             messageIndicator.error(t_("moduleOpenIOError"), e.getLocalizedMessage());
             e.printStackTrace();
+            showDialog(e.toString());
+
         } catch (TokenException e) {
             messageIndicator.error(t_("moduleOpenInitError"), e.getLocalizedMessage());
             e.printStackTrace();
+            showDialog(e.toString());
+
         }
     }
 
@@ -282,6 +288,8 @@ public class Window extends Application {
             manager.end();
         } catch (TokenException e) {
             e.printStackTrace(); // TODO propager aux appelants ?
+            showDialog(e.toString());
+
         }
     }
 
@@ -341,12 +349,20 @@ public class Window extends Application {
                 manager.createToken(LABELl,SOPINl,PINl);
             } catch (TokenException e) {
                 e.printStackTrace();
+                showDialog(e.toString());
+
             } catch (IOException e) {
                 e.printStackTrace();
+                showDialog(e.toString());
+
             } catch (InvalidKeySpecException e) {
                 e.printStackTrace();
+                showDialog(e.toString());
+
             } catch (NoSuchAlgorithmException e) {
                 e.printStackTrace();
+                showDialog(e.toString());
+
             }
               stage1.hide();
 
@@ -372,6 +388,7 @@ public class Window extends Application {
             PINinit = new Label("Token initialized: " + item.getToken().getTokenInfo().isTokenInitialized());
         } catch (TokenException e) {
             e.printStackTrace();
+            showDialog(e.toString());
         }
         VBox EditPinWind= new VBox();
         Stage stage1 = new Stage();
@@ -405,6 +422,7 @@ public class Window extends Application {
                 item.getToken().initToken(AskPIN.getText().toCharArray(),AskLabel.getText());
             } catch (TokenException e) {
                 e.printStackTrace();
+                showDialog(e.toString());
             }
 
             stage1.hide();}
@@ -425,10 +443,11 @@ public class Window extends Application {
         Label labelToken = null;
         Label PINinit = null;
         try {
-            labelToken = new Label("Token Label: " + item.getToken().getTokenInfo().getLabel());
-            PINinit = new Label("Token initialized: " + item.getToken().getTokenInfo().isTokenInitialized());
+            labelToken = new Label("Min PIN Length: " + item.getToken().getTokenInfo().getMinPinLen());
+            PINinit = new Label("Max PIN Length: " + item.getToken().getTokenInfo().getMaxPinLen());
         } catch (TokenException e) {
             e.printStackTrace();
+            showDialog(e.toString());
         }
         VBox EditPinWind= new VBox();
         Stage stage1 = new Stage();
@@ -441,8 +460,14 @@ public class Window extends Application {
         HBox hbPIN = new HBox();
         hbPIN.getChildren().addAll(labelLab, AskPIN);
         hbPIN.setAlignment(Pos.CENTER);
-        TextField AskSOPIN = new TextField();
-        Label labelSOPIN = new Label("SOPIN:");
+
+
+        TextField AskOldPIN = new TextField();
+        Label labelOldPIN = new Label("OldPIN:");
+
+        HBox hbOldPIN = new HBox();
+        hbOldPIN.getChildren().addAll(labelOldPIN, AskOldPIN);
+        hbOldPIN.setAlignment(Pos.CENTER);
 
         Button Cancel = new Button();
         Cancel.setText("Cancel");
@@ -452,7 +477,12 @@ public class Window extends Application {
         Change.setText("Change");
         Change.setOnAction((event) -> {
 
-
+            try {
+                manager.changeUserPin(item.getToken(),AskOldPIN.getText(),AskPIN.getText());
+            } catch (TokenException e) {
+                showDialog(e.toString());
+                e.printStackTrace();
+            }
 
             stage1.hide();}
 
@@ -464,9 +494,27 @@ public class Window extends Application {
         hbBUT.setAlignment(Pos.CENTER);
 
 
-        EditPinWind.getChildren().addAll(labelToken,PINinit,hbPIN,hbBUT);
+        EditPinWind.getChildren().addAll(labelToken,PINinit,hbOldPIN,hbPIN,hbBUT);
         stage1.show();
     }
+
+
+    private void showDialog (String Dialog) {
+
+        Stage dialogStage = new Stage();
+        dialogStage.initModality(Modality.WINDOW_MODAL);
+
+
+        Button Ok = new Button("Ok");
+        Ok.setOnAction((event) -> dialogStage.hide());
+
+        dialogStage.setScene(new Scene(VBoxBuilder.create().
+        children(new Text("Exception"+ Dialog), Ok).
+                alignment(Pos.CENTER).padding(new Insets(5)).build()));
+        dialogStage.show();
+
+    }
+
 
     }
 
