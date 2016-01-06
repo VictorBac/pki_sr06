@@ -1,11 +1,19 @@
 package fr.utc.sr06.CryptokiExplorer;
 
 import iaik.pkcs.pkcs11.*;
-import iaik.pkcs.pkcs11.objects.KeyPair;
+import iaik.pkcs.pkcs11.Mechanism;
+import iaik.pkcs.pkcs11.objects.*;
 import iaik.pkcs.pkcs11.objects.Object;
-import iaik.pkcs.pkcs11.objects.RSAPrivateKey;
-import iaik.pkcs.pkcs11.objects.RSAPublicKey;
 import iaik.pkcs.pkcs11.wrapper.*;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.Scene;
+import javafx.scene.control.Button;
+import javafx.scene.layout.VBoxBuilder;
+import javafx.scene.text.Text;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
+import javafx.util.StringConverter;
 
 import java.io.IOException;
 import java.math.BigInteger;
@@ -14,6 +22,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.RSAPublicKeySpec;
 import java.security.spec.X509EncodedKeySpec;
+import java.time.LocalDate;
 import java.util.*;
 
 /**
@@ -336,7 +345,46 @@ public class ModuleManager {
     }
 
 
-    public void wrapkeys () throws TokenException {
+    public void generateAESkey (Token token, String pin, String Label, Token tok, LocalDate StartDate, LocalDate EndDate) throws TokenException {
+
+        Session session = null;
+
+        session = token.openSession(Token.SessionType.SERIAL_SESSION, Token.SessionReadWriteBehavior.RW_SESSION, null, null);
+
+        session.login(Session.UserType.USER, pin.toCharArray());
+
+        Mechanism keyGenerationMechanism = Mechanism.get(PKCS11Constants.CKM_AES_KEY_GEN);
+
+        AESSecretKey aesKey = new AESSecretKey();
+        aesKey.getValueLen().setLongValue(new Long(32));
+        char[] labelforAES = Label.toCharArray();
+        aesKey.getLabel().setCharArrayValue(labelforAES);
+        Date dateS = new Date(StartDate.getYear(),StartDate.getMonthValue(),StartDate.getDayOfMonth());
+        Date dateE = new Date(EndDate.getYear(),EndDate.getMonthValue(),EndDate.getDayOfMonth());
+
+        showDialog(dateS.toString()+dateE.toString());
+
+       // aesKey.getStartDate().setDateValue(dateS);
+       // aesKey.getEndDate().setDateValue(dateE);
+
+        AESSecretKey aesKeyNew = (AESSecretKey) session.generateKey(keyGenerationMechanism, aesKey);
+                showDialog("the AES Key is: \n:"+ aesKeyNew.toString());
+        session.closeSession();
+
+    }
+    private void showDialog (String Dialog) {
+
+        Stage dialogStage = new Stage();
+        dialogStage.initModality(Modality.WINDOW_MODAL);
+
+
+        Button Ok = new Button("Ok");
+        Ok.setOnAction((event) -> dialogStage.hide());
+
+        dialogStage.setScene(new Scene(VBoxBuilder.create().
+                children(new Text("Exception"+ Dialog), Ok).
+                alignment(Pos.CENTER).padding(new Insets(5)).build()));
+        dialogStage.show();
 
     }
 

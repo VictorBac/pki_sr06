@@ -27,6 +27,7 @@ import java.io.File;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
+import java.time.LocalDate;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.ResourceBundle;
@@ -143,13 +144,15 @@ public class Window extends Application {
         MenuItem editPIN = new MenuItem("EDIT PIN");
         editPIN.setOnAction((event) -> EditPIN());
 
+        MenuItem generatewrappingKey = new MenuItem("Gen Wrapping Key");
+        generatewrappingKey.setOnAction((event) -> genWK());
 
 
         MenuItem editSOPIN = new MenuItem("EDIT SOPIN");
-        editSOPIN.setOnAction((event) -> EditPIN());
+        editSOPIN.setOnAction((event) -> EditSOPIN());
 
 
-        menuEdit.getItems().addAll(CreateToken,InitToken,editPIN,editSOPIN);
+        menuEdit.getItems().addAll(CreateToken,InitToken,editPIN,editSOPIN,generatewrappingKey);
 
 
         Menu menuView = new Menu("View");
@@ -494,6 +497,132 @@ public class Window extends Application {
         stage1.show();
     }
 
+
+    private void EditSOPIN() {
+        Slot item = getCurrentSlot();
+        Label labelToken = null;
+        Label PINinit = null;
+        Label TextIntro = new Label("Changer le SOPin entraine l'effacement de toutes les données");
+        try {
+            labelToken = new Label("Min PIN Length: " + item.getToken().getTokenInfo().getMinPinLen());
+            PINinit = new Label("Max PIN Length: " + item.getToken().getTokenInfo().getMaxPinLen());
+        } catch (TokenException e) {
+            e.printStackTrace();
+            showDialog(e.toString());
+        }
+        VBox EditPinWind= new VBox();
+        Stage stage1 = new Stage();
+        stage1.setTitle("Change SOPIN");
+        stage1.setScene(new Scene(EditPinWind, 300, 200));
+        stage1.getScene().getStylesheets().add("css/stylesheet.css");
+        TextField AskPIN = new TextField();
+        Label labelLab = new Label("PIN:");
+
+        HBox hbPIN = new HBox();
+        hbPIN.getChildren().addAll(labelLab, AskPIN);
+        hbPIN.setAlignment(Pos.CENTER);
+
+
+        Button Cancel = new Button();
+        Cancel.setText("Cancel");
+        Cancel.setOnAction((event) -> stage1.hide());
+
+        Button Change = new Button();
+        Change.setText("Change");
+        Change.setOnAction((event) -> {
+
+            try {
+                item.getToken().initToken(AskPIN.getText().toCharArray(),item.getToken().getTokenInfo().getLabel());
+            } catch (TokenException e) {
+                showDialog(e.toString());
+                e.printStackTrace();
+            }
+
+            stage1.hide();}
+
+
+        );
+
+        HBox hbBUT = new HBox();
+        hbBUT.getChildren().addAll(Cancel, Change);
+        hbBUT.setAlignment(Pos.CENTER);
+
+
+        EditPinWind.getChildren().addAll(TextIntro,labelToken,PINinit,hbPIN,hbBUT);
+        stage1.show();
+    }
+
+    private void genWK() {
+        VBox genWK= new VBox();
+
+        Stage stage1 = new Stage();
+        stage1.setTitle("Generate AES Key");
+        stage1.setScene(new Scene(genWK, 400, 300));
+        stage1.getScene().getStylesheets().add("css/stylesheet.css");
+
+
+        Slot item = getCurrentSlot();
+
+
+        TextField AskPIN = new TextField();
+        Label labelPIN = new Label("Your PIN:");
+
+        HBox hbOldPIN = new HBox();
+        hbOldPIN.getChildren().addAll(labelPIN, AskPIN);
+        hbOldPIN.setAlignment(Pos.CENTER);
+
+        TextField AskLabel = new TextField();
+        Label labelLabel = new Label("Label:");
+
+
+        HBox Labels = new HBox();
+        Labels.getChildren().addAll(labelLabel, AskLabel);
+        Labels.setAlignment(Pos.CENTER);
+        DatePicker AskDateStart = new DatePicker(LocalDate.now());
+        Label labelDateStart = new Label("StartDate:");
+        DatePicker AskDateEnd = new DatePicker(LocalDate.now());
+        Label labelDateEnd = new Label("EndDate:");
+
+
+        HBox Date = new HBox();
+        Date.getChildren().addAll(labelDateStart, AskDateStart,labelDateEnd,AskDateEnd);
+        Date.setAlignment(Pos.CENTER);
+
+
+        Button Cancel = new Button();
+        Cancel.setText("Cancel");
+        Cancel.setOnAction((event) -> stage1.hide());
+
+        Button Change = new Button();
+        Change.setText("Generate");
+        Change.setOnAction((event) -> {
+
+            try {
+
+                showDialog(AskDateEnd.getValue().toString()+AskDateStart.getValue().toString());
+
+               manager.generateAESkey(item.getToken(),AskPIN.getText(),AskLabel.getText(),item.getToken(),AskDateStart.getValue(),AskDateEnd.getValue());
+
+
+
+            } catch (TokenException e) {
+                showDialog(e.toString());
+                e.printStackTrace();
+            }
+
+            stage1.hide();}
+
+
+        );
+
+        HBox hbBUT = new HBox();
+        hbBUT.getChildren().addAll(Cancel, Change);
+        hbBUT.setAlignment(Pos.CENTER);
+
+        genWK.getChildren().addAll(hbOldPIN,Labels,Date,hbBUT);
+        stage1.show();
+
+    }
 
     private void showDialog (String Dialog) {
 

@@ -45,6 +45,7 @@ public class MechanismsFunction extends BaseUIFunction {
             }
         } catch (TokenException e) {
             e.printStackTrace();
+
         }
 
     }
