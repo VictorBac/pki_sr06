@@ -5,9 +5,7 @@ import iaik.pkcs.pkcs11.objects.KeyPair;
 import iaik.pkcs.pkcs11.objects.Object;
 import iaik.pkcs.pkcs11.objects.RSAPrivateKey;
 import iaik.pkcs.pkcs11.objects.RSAPublicKey;
-import iaik.pkcs.pkcs11.wrapper.Functions;
-import iaik.pkcs.pkcs11.wrapper.PKCS11Constants;
-import iaik.pkcs.pkcs11.wrapper.PKCS11Implementation;
+import iaik.pkcs.pkcs11.wrapper.*;
 
 import java.io.IOException;
 import java.math.BigInteger;
@@ -111,6 +109,9 @@ public class ModuleManager {
         session.closeSession();
         System.out.println("Pin changed");
     }
+
+
+
 
 
     public void createRsaPairKey(Token tok, String userPin) throws TokenException, NoSuchAlgorithmException, InvalidKeySpecException {
@@ -283,6 +284,31 @@ public class ModuleManager {
         //m.finalize(null);
 
     }
+
+    public List<Object> availableObjects (Token tok) throws TokenException {
+        List<Object> obj=new ArrayList<>();
+        char[] mdp={'1','2','3','4'};
+        Session sessionObj = tok.openSession(Token.SessionType.SERIAL_SESSION, Token.SessionReadWriteBehavior.RW_SESSION, null, null);
+        sessionObj.login(Session.UserType.USER, mdp);
+        sessionObj.findObjectsInit(null);
+        Object[] objTok=sessionObj.findObjects(1);
+
+        while (objTok.length!=0){ //il reste des objets non listés
+            obj.add(objTok[0]);
+            System.out.println(objTok[0].toString());
+            objTok=sessionObj.findObjects(1);
+        }
+        sessionObj.findObjectsFinal();
+        sessionObj.logout();
+        sessionObj.closeSession();
+        return  obj;
+    }
+
+
+    public void wrapkeys () throws TokenException {
+
+    }
+
 
     public void end() throws TokenException {
         if (m != null) {
