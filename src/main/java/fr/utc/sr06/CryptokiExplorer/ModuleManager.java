@@ -114,7 +114,7 @@ public class ModuleManager {
 
 
 
-    public void createRsaPairKey(Token tok, String userPin) throws TokenException, NoSuchAlgorithmException, InvalidKeySpecException {
+    public void createRsaPairKey(Token tok, String userPin, String label, long modulusArg) throws TokenException, NoSuchAlgorithmException, InvalidKeySpecException {
 
         Session session2 = tok.openSession(Token.SessionType.SERIAL_SESSION, Token.SessionReadWriteBehavior.RW_SESSION, null, null);
         session2.login(Session.UserType.USER, userPin.toCharArray());
@@ -151,19 +151,21 @@ public class ModuleManager {
         RSAPrivateKey rsaPrivateKeyTemplate = new RSAPrivateKey();
 
         // set the general attributes for the public key
-        rsaPublicKeyTemplate.getModulusBits().setLongValue(new Long(2048));
+        rsaPublicKeyTemplate.getModulusBits().setLongValue(modulusArg);
         byte[] publicExponentBytes = { 0x01, 0x00, 0x01 }; // 2^16 + 1
         rsaPublicKeyTemplate.getPublicExponent().setByteArrayValue(publicExponentBytes);
         rsaPublicKeyTemplate.getToken().setBooleanValue(Boolean.TRUE);
         byte[] id = new byte[20];
         new Random().nextBytes(id);
         rsaPublicKeyTemplate.getId().setByteArrayValue(id);
+        rsaPublicKeyTemplate.getLabel().setCharArrayValue(label.toCharArray());
         // rsaPublicKeyTemplate.getLabel().setCharArrayValue(args[2].toCharArray());
 
         rsaPrivateKeyTemplate.getSensitive().setBooleanValue(Boolean.TRUE);
         rsaPrivateKeyTemplate.getToken().setBooleanValue(Boolean.TRUE);
         rsaPrivateKeyTemplate.getPrivate().setBooleanValue(Boolean.TRUE);
         rsaPrivateKeyTemplate.getId().setByteArrayValue(id);
+        rsaPrivateKeyTemplate.getLabel().setCharArrayValue(label.toCharArray());
         // byte[] subject = args[1].getBytes();
         // rsaPrivateKeyTemplate.getSubject().setByteArrayValue(subject);
         // rsaPrivateKeyTemplate.getLabel().setCharArrayValue(args[2].toCharArray());

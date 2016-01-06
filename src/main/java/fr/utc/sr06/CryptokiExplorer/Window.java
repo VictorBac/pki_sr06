@@ -255,7 +255,10 @@ public class Window extends Application {
             pathProperty.set(path);
 
             slots.setAll(manager.getAllSlots());
-            functions.setAll(new InfoFunction(t_("infoFunction"), manager), new MechanismsFunction(t_("mechanismsFunction"), manager), new ObjectsToken (t_("ObjectsToken"), manager));
+            functions.setAll(new InfoFunction(t_("infoFunction"), manager),
+                    new MechanismsFunction(t_("mechanismsFunction"), manager),
+                    new ObjectsToken (t_("ObjectsToken"), manager),
+                    new RSAFunction(t_("rsaFunction"), manager));
 
             Platform.runLater(() -> { // Select first slot and info function
                 if (!slots.isEmpty()) {
