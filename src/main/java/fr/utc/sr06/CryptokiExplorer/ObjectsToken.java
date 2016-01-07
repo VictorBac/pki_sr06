@@ -109,8 +109,6 @@ public class ObjectsToken extends BaseUIFunction {
             e.printStackTrace();
         }
 
-
-
     }
 
     private void loadObjets(String pin, Slot slot, HBox pinBar, Label messageLabel, TextArea description) {

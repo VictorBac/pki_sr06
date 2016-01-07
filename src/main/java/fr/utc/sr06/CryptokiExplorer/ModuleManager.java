@@ -251,8 +251,18 @@ public class ModuleManager {
     public List<Object> availableObjects (Token tok) throws TokenException {
         Session sessionObj = tok.openSession(Token.SessionType.SERIAL_SESSION, Token.SessionReadWriteBehavior.RW_SESSION, null, null);
         List<Object> obj = listObjects(sessionObj);
-        sessionObj.closeSession();
         return obj;
+    }
+
+    public List<Object> availableObjects (Token tok, String pin) throws TokenException {
+        List<Object> obj = availableObjects(tok);
+
+        char[] mdp = pin.toCharArray();
+        Session sessionObj = tok.openSession(Token.SessionType.SERIAL_SESSION, Token.SessionReadWriteBehavior.RW_SESSION, null, null);
+        sessionObj.login(Session.UserType.USER, mdp);
+
+        obj.addAll(listObjects(sessionObj));
+        return  obj;
     }
 
     @FunctionalInterface
@@ -278,10 +288,7 @@ public class ModuleManager {
         char[] mdp = pinS.toCharArray();
 
         Session sessionObj = tok.openSession(Token.SessionType.SERIAL_SESSION, Token.SessionReadWriteBehavior.RW_SESSION, null, null);
-        sessionObj.login(Session.UserType.USER, mdp);
         sessionObj.destroyObject(objToDestroy);
-        sessionObj.logout();
-        sessionObj.closeSession();
         System.out.println("destruction2");
     }
 
@@ -289,17 +296,6 @@ public class ModuleManager {
         Session sessionObj = tok.openSession(Token.SessionType.SERIAL_SESSION, Token.SessionReadWriteBehavior.RW_SESSION, null, null);
         sessionObj.logout();
         sessionObj.closeSession();
-    }
-
-    public List<Object> availableObjects (Token tok, String pin) throws TokenException {
-        List<Object> obj = availableObjects(tok);
-
-        char[] mdp = pin.toCharArray();
-        Session sessionObj = tok.openSession(Token.SessionType.SERIAL_SESSION, Token.SessionReadWriteBehavior.RW_SESSION, null, null);
-        sessionObj.login(Session.UserType.USER, mdp);
-
-        obj.addAll(listObjects(sessionObj));
-        return  obj;
     }
 
     public AESSecretKey generateAESkey (Token token, String pin, String Label, long bitesLength) throws TokenException {
