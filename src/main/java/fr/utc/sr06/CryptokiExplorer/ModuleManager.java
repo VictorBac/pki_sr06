@@ -308,6 +308,22 @@ public class ModuleManager {
         return obj;
     }
 
+    public void destroyObject (Token tok, Object objToDestroy, String pinS) throws TokenException {
+        char[] mdp = pinS.toCharArray();
+
+        Session sessionObj = tok.openSession(Token.SessionType.SERIAL_SESSION, Token.SessionReadWriteBehavior.RW_SESSION, null, null);
+        sessionObj.destroyObject(objToDestroy);
+        System.out.println("destruction2");
+
+
+    }
+
+    public void objectDeconnection (Token tok) throws  TokenException {
+        Session sessionObj = tok.openSession(Token.SessionType.SERIAL_SESSION, Token.SessionReadWriteBehavior.RW_SESSION, null, null);
+        sessionObj.logout();
+        sessionObj.closeSession();
+    }
+
     public List<Object> availableObjects (Token tok, String pin) throws TokenException {
         List<Object> obj = availableObjects(tok);
 
@@ -316,10 +332,6 @@ public class ModuleManager {
         sessionObj.login(Session.UserType.USER, mdp);
 
         obj.addAll(listObjects(sessionObj));
-
-        sessionObj.logout();
-        sessionObj.closeSession();
-
         return  obj;
     }
 

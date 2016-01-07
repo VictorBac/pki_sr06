@@ -1,6 +1,7 @@
 package fr.utc.sr06.CryptokiExplorer;
 
 import iaik.pkcs.pkcs11.*;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.scene.Node;
 import javafx.scene.control.TextArea;
 
@@ -13,6 +14,7 @@ import java.util.ResourceBundle;
 public class MechanismsFunction extends BaseUIFunction {
     private TextArea ui = null;
     private ResourceBundle translations;
+    private SimpleStringProperty mechanims=new SimpleStringProperty();
 
     public MechanismsFunction(String name, ModuleManager manager) { // TODO: il nous faut un moyen d'afficher des erreurs
         super(name, manager);
@@ -22,6 +24,7 @@ public class MechanismsFunction extends BaseUIFunction {
     @Override
     public void load(Slot slot) {
         ui = new TextArea();
+        ui.textProperty().bind(mechanims);
         // TODO lancer sur un thread
         try {
             Token token = slot.getToken();
@@ -34,10 +37,11 @@ public class MechanismsFunction extends BaseUIFunction {
                     data.append(token.getMechanismInfo(mec).toString());
                     data.append("\n\n");
                 }
-
-                ui.setText(data.toString());
+                mechanims.set(data.toString());
+                //ui.setText(data.toString());
             } else {
-                ui.setText(translations.getString("noToken"));
+                mechanims.set(translations.getString("noToken"));
+                //ui.setText(translations.getString("noToken"));
             }
         } catch (TokenException e) {
             e.printStackTrace();

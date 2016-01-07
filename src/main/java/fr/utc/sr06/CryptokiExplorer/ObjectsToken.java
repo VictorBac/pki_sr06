@@ -1,11 +1,13 @@
 package fr.utc.sr06.CryptokiExplorer;
 
+import iaik.pkcs.pkcs11.Session;
 import iaik.pkcs.pkcs11.Slot;
 import iaik.pkcs.pkcs11.Token;
 import iaik.pkcs.pkcs11.TokenException;
 import iaik.pkcs.pkcs11.objects.Attribute;
 import iaik.pkcs.pkcs11.objects.Object;
 import javafx.application.Platform;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.Event;
@@ -26,8 +28,12 @@ import java.util.ResourceBundle;
  * Created by marine on 04/01/16.
  */
 public class ObjectsToken extends BaseUIFunction {
+    private Slot slotObj;
     private VBox ui = null;
+    private SimpleStringProperty mechanims=new SimpleStringProperty();
+
     private ChoiceBox<Object> select = null;
+    private HBox boiteH = null;
 
     private ResourceBundle translations;
     private ObservableList<Object> obj1;
@@ -44,7 +50,10 @@ public class ObjectsToken extends BaseUIFunction {
 
     @Override
     public void load(Slot slot) {
+        slotObj = slot;
+        boiteH = new HBox();
         ui = new VBox();
+        Button destroyButton = new Button("Delete");
 
         HBox pinBar = new HBox();
         pinBar.getStyleClass().add("pin-bar");
@@ -55,6 +64,7 @@ public class ObjectsToken extends BaseUIFunction {
         pinBar.setHgrow(pinInput, Priority.ALWAYS);
 
         select = new ChoiceBox<>();
+        boiteH.getChildren().setAll(select, destroyButton);
         obj1 = FXCollections.observableArrayList();
         select.setItems(obj1);
         // display
@@ -70,11 +80,11 @@ public class ObjectsToken extends BaseUIFunction {
             }
         });
 
-
         TextArea description = new TextArea();
+        description.textProperty().bind(mechanims);
         select.getSelectionModel().selectedItemProperty().addListener((ov, old_value, new_value) -> {
             if (new_value != null) {
-                description.setText(new_value.toString());
+                mechanims.set(new_value.toString());
             }
         });
 
@@ -82,6 +92,9 @@ public class ObjectsToken extends BaseUIFunction {
 
         pinInput.setOnAction((event) -> loadObjets(pinInput.getText(), slot, pinBar, messageLabel, description));
         loadButton.setOnMouseClicked((event) -> loadObjets(pinInput.getText(), slot, pinBar, messageLabel, description));
+        pinInput.setOnAction((event) -> destroyObj(slot,select, pinInput.getText(),description ));
+
+        destroyButton.setOnMouseClicked((event) -> destroyObj(slot,select, pinInput.getText(), description ));
 
         try {
             Token token = slot.getToken();
@@ -92,7 +105,7 @@ public class ObjectsToken extends BaseUIFunction {
                     messageLabel.setText(t_("noPublicObjects"));
                     ui.getChildren().setAll(pinBar, messageLabel);
                 } else {
-                    ui.getChildren().setAll(pinBar, select, description);
+                    ui.getChildren().setAll(pinBar, boiteH, description);
                     ui.setFillWidth(true);
                     ui.setVgrow(description, Priority.ALWAYS);
                     Platform.runLater(() -> select.getSelectionModel().selectFirst());
@@ -101,6 +114,9 @@ public class ObjectsToken extends BaseUIFunction {
         } catch (TokenException e) {
             e.printStackTrace();
         }
+
+
+
     }
 
     private void loadObjets(String pin, Slot slot, HBox pinBar, Label messageLabel, TextArea description) {
@@ -115,7 +131,7 @@ public class ObjectsToken extends BaseUIFunction {
                     messageLabel.setText(t_("noObjects"));
                     ui.getChildren().setAll(pinBar, messageLabel);
                 } else {
-                    ui.getChildren().setAll(pinBar, select, description);
+                    ui.getChildren().setAll(pinBar, boiteH, description);
                     ui.setFillWidth(true);
                     ui.setVgrow(description, Priority.ALWAYS);
                     Platform.runLater(() -> select.getSelectionModel().selectFirst());
@@ -133,6 +149,18 @@ public class ObjectsToken extends BaseUIFunction {
         }
     }
 
+    private void destroyObj (Slot slot, ChoiceBox<Object> select1, String pinS, TextArea text) {
+        try {
+            Token tok = slot.getToken();
+            Object obj = select1.getSelectionModel().selectedItemProperty().get();
+            select1.getItems().remove(obj);
+            manager.destroyObject(tok,obj , pinS);
+            text.setText("");
+        } catch (TokenException e ){e.printStackTrace();}
+
+    }
+
+
     @Override
     public Node getUI() {
         return ui;
@@ -140,6 +168,9 @@ public class ObjectsToken extends BaseUIFunction {
 
     @Override
     public void unload() {
-
+        try {
+            Token tok = slotObj.getToken();
+            manager.objectDeconnection(tok);
+        } catch (TokenException e) {e.printStackTrace();}
     }
 }
