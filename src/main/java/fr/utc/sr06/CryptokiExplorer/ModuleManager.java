@@ -4,6 +4,7 @@ import iaik.pkcs.pkcs11.*;
 import iaik.pkcs.pkcs11.Mechanism;
 import iaik.pkcs.pkcs11.objects.*;
 import iaik.pkcs.pkcs11.objects.Object;
+import iaik.pkcs.pkcs11.parameters.InitializationVectorParameters;
 import iaik.pkcs.pkcs11.wrapper.*;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -11,19 +12,25 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.layout.VBoxBuilder;
 import javafx.scene.text.Text;
+import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.util.StringConverter;
 
-import java.io.IOException;
+import javax.swing.text.Utilities;
+import java.io.*;
 import java.math.BigInteger;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.RSAPublicKeySpec;
 import java.security.spec.X509EncodedKeySpec;
+import java.sql.Time;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.*;
+
+
 
 /**
  * Created by victor on 31/12/15.
@@ -344,7 +351,7 @@ public class ModuleManager {
         return  obj;
     }
 
-
+//  NE MARCHE PASS ! :
     public void generateAESkey (Token token, String pin, String Label, Token tok, LocalDate StartDate, LocalDate EndDate) throws TokenException {
 
         Session session = null;
@@ -354,12 +361,11 @@ public class ModuleManager {
         session.login(Session.UserType.USER, pin.toCharArray());
 
         Mechanism keyGenerationMechanism = Mechanism.get(PKCS11Constants.CKM_AES_KEY_GEN);
-
         AESSecretKey aesKey = new AESSecretKey();
         aesKey.getValueLen().setLongValue(new Long(32));
         char[] labelforAES = Label.toCharArray();
         aesKey.getLabel().setCharArrayValue(labelforAES);
-        Date dateS = new Date(StartDate.getYear(),StartDate.getMonthValue(),StartDate.getDayOfMonth());
+        @SuppressWarnings("deprecation") Date dateS = new Date(StartDate.getYear(),StartDate.getMonthValue(),StartDate.getDayOfMonth());
         Date dateE = new Date(EndDate.getYear(),EndDate.getMonthValue(),EndDate.getDayOfMonth());
 
         showDialog(dateS.toString()+dateE.toString());
@@ -372,7 +378,300 @@ public class ModuleManager {
         session.closeSession();
 
     }
-    private void showDialog (String Dialog) {
+
+    public void encryptAES(Slot item, String pin, String FileToEncrypt, String EncryptedFile, LocalDate AskDateStartValue, LocalDate AskDateEndValue) throws TokenException, IOException {
+        Token token = item.getToken();
+
+        Session session;
+        session = openAuthorizedSession(token, Token.SessionReadWriteBehavior.RW_SESSION, pin);
+
+        System.out.println("################################################################################");
+        System.out.println("generate secret encryption/decryption key");
+        Mechanism keyMechanism = Mechanism.get(PKCS11Constants.CKM_AES_KEY_GEN);
+        AESSecretKey secretEncryptionKeyTemplate = new AESSecretKey();
+        byte[] id = new byte[20];
+
+        new Random().nextBytes(id);
+        secretEncryptionKeyTemplate.getId().setByteArrayValue(id);
+        secretEncryptionKeyTemplate.getLabel().setCharArrayValue("Encripkey".toCharArray());
+        secretEncryptionKeyTemplate.getWrapWithTrusted().setBooleanValue(Boolean.TRUE);
+        secretEncryptionKeyTemplate.getToken().setBooleanValue(Boolean.TRUE);
+        secretEncryptionKeyTemplate.getValueLen().setLongValue(new Long(16));
+        secretEncryptionKeyTemplate.getEncrypt().setBooleanValue(Boolean.TRUE);
+        secretEncryptionKeyTemplate.getDecrypt().setBooleanValue(Boolean.TRUE);
+        secretEncryptionKeyTemplate.getPrivate().setBooleanValue(Boolean.TRUE);
+        secretEncryptionKeyTemplate.getSensitive().setBooleanValue(Boolean.TRUE);
+        secretEncryptionKeyTemplate.getExtractable().setBooleanValue(Boolean.TRUE);
+        secretEncryptionKeyTemplate.getWrap().setBooleanValue(Boolean.TRUE);
+
+      //  Date dateS = new Date(AskDateStartValue.getYear(),AskDateStartValue.getMonthValue(),AskDateStartValue.getDayOfMonth());
+      //  Date dateE = new Date(AskDateEndValue.getYear(),AskDateEndValue.getMonthValue(),AskDateEndValue.getDayOfMonth());
+        Date dateS = Date.from(AskDateStartValue.atStartOfDay(ZoneId.systemDefault()).toInstant());
+        Date dateE = Date.from(AskDateEndValue.atStartOfDay(ZoneId.systemDefault()).toInstant());
+     //  secretEncryptionKeyTemplate.getStartDate().setDateValue(dateS);
+     //   secretEncryptionKeyTemplate.getEndDate().setDateValue(dateE);
+        AESSecretKey encryptionKey = (AESSecretKey) session.generateKey(keyMechanism,
+                secretEncryptionKeyTemplate);
+
+        System.out.println("PROUT PROUT PROUT secret encryption/decryption key");
+
+
+        System.out
+                .println("################################################################################");
+
+        System.out
+                .println("################################################################################");
+
+        Mechanism encryptionMechanism = Mechanism.get(PKCS11Constants.CKM_AES_CBC_PAD);
+        byte[] encryptInitializationVector = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+        InitializationVectorParameters encryptInitializationVectorParameters = new InitializationVectorParameters(
+                encryptInitializationVector);
+        encryptionMechanism.setParameters(encryptInitializationVectorParameters);
+
+        // initialize for encryption
+        session.encryptInit(encryptionMechanism, encryptionKey);
+
+        String raww = "/media/raphael/DISQUEDUR/pki_sr06/src/main/resources/FileToEncrypt/testencrypt.txt";
+        InputStream dataInputStream = new FileInputStream(FileToEncrypt);
+
+        byte[] dataBuffer = new byte[1024];
+        int bytesRead;
+        ByteArrayOutputStream streamBuffer = new ByteArrayOutputStream();
+
+        // feed in all data from the input stream
+        while ((bytesRead = dataInputStream.read(dataBuffer)) >= 0) {
+            streamBuffer.write(dataBuffer, 0, bytesRead);
+        }
+
+        Arrays.fill(dataBuffer, (byte) 0); // ensure that no data is left in the
+        // memory
+        streamBuffer.flush();
+
+        byte[] rawData = streamBuffer.toByteArray();
+        byte[] encryptedData = session.encrypt(rawData);
+        streamBuffer.close();
+
+
+        String encryptedDataa = "/media/raphael/DISQUEDUR/pki_sr06/src/main/resources/FileToEncrypt/encryptedtext.txt";
+
+InputStream dataOut = new ByteArrayInputStream(encryptedData);
+        OutputStream output = new FileOutputStream(EncryptedFile);
+        while ((bytesRead = dataOut.read(dataBuffer)) >= 0) {
+            output.write(dataBuffer, 0, bytesRead);
+        }
+
+        Arrays.fill(dataBuffer, (byte) 0); // ensure that no data is left in the
+output.close();
+
+
+        System.out
+                .println("################################################################################");
+
+        System.out
+                .println("################################################################################");
+        System.out.println("trying to decrypt");
+
+        // Cipher des3Cipher = Cipher.getInstance("DES3/CBC/PKCS5Padding");
+
+        Mechanism decryptionMechanism = Mechanism.get(PKCS11Constants.CKM_AES_CBC_PAD);
+        byte[] decryptInitializationVector = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+        InitializationVectorParameters decryptInitializationVectorParameters = new InitializationVectorParameters(
+                decryptInitializationVector);
+        decryptionMechanism.setParameters(decryptInitializationVectorParameters);
+
+        // initialize for decryption
+        session.decryptInit(decryptionMechanism, encryptionKey);
+
+        byte[] decryptedData = session.decrypt(encryptedData);
+
+        // compare initial data and decrypted data
+        boolean equal = false;
+        if (rawData.length != decryptedData.length) {
+            equal = false;
+        } else {
+            equal = true;
+            for (int i = 0; i < rawData.length; i++) {
+                if (rawData[i] != decryptedData[i]) {
+                    equal = false;
+                    break;
+                }
+            }
+        }
+        System.out.println((equal) ? "successful" : "ERROR");
+
+        System.out
+                .println("################################################################################");
+        session.findObjectsInit(secretEncryptionKeyTemplate);
+        session.findObjectsFinal();
+
+        session.closeSession();
+
+    }
+
+    public static Session openAuthorizedSession(Token token, boolean rwSession,
+                                                 String pin) throws TokenException,
+            IOException {
+        if (token == null) {
+            throw new NullPointerException("Argument \"token\" must not be null.");
+        }
+
+
+        System.out
+                .println("################################################################################");
+        System.out.println("opening session");
+        Session session = token.openSession(Token.SessionType.SERIAL_SESSION, rwSession,
+                null, null);
+
+        TokenInfo tokenInfo = token.getTokenInfo();
+        if (tokenInfo.isLoginRequired()) {
+            if (tokenInfo.isProtectedAuthenticationPath()) {
+                System.out.print("Please enter the user-PIN at the PIN-pad of your reader.");
+                System.out.flush();
+                session.login(Session.UserType.USER, null); // the token prompts the PIN by other means;
+                // e.g. PIN-pad
+            } else {
+                System.out.print("Enter user-PIN and press [return key]: ");
+                System.out.flush();
+                String userPINString;
+                if (null != pin) {
+                    userPINString = pin;
+                    System.out.println(pin);
+                    session.login(Session.UserType.USER, userPINString.toCharArray());
+                }
+            }
+        }
+        System.out
+                .println("################################################################################");
+
+        return session;
+    }
+
+
+
+    public void wrapAES (Slot item, String pin, String FileToEncrypt, String EncryptedFile) throws TokenException, IOException {
+        Token token = item.getToken();
+
+        Session session;
+        session = openAuthorizedSession(token, Token.SessionReadWriteBehavior.RW_SESSION, pin);
+
+
+        System.out
+                .println("################################################################################");
+        System.out.println("generate secret encryption/decryption key");
+        Mechanism keyMechanism = Mechanism.get(PKCS11Constants.CKM_AES_KEY_GEN);
+        AESSecretKey secretEncryptionKeyTemplate = new AESSecretKey();
+        byte[] id = new byte[20];
+
+        new Random().nextBytes(id);
+        secretEncryptionKeyTemplate.getId().setByteArrayValue(id);
+        secretEncryptionKeyTemplate.getLabel().setCharArrayValue("WRAPENCRIPTKEY".toCharArray());
+        secretEncryptionKeyTemplate.getWrapWithTrusted().setBooleanValue(Boolean.TRUE);
+        secretEncryptionKeyTemplate.getToken().setBooleanValue(Boolean.TRUE);
+        secretEncryptionKeyTemplate.getValueLen().setLongValue(new Long(16));
+        secretEncryptionKeyTemplate.getEncrypt().setBooleanValue(Boolean.TRUE);
+        secretEncryptionKeyTemplate.getDecrypt().setBooleanValue(Boolean.TRUE);
+        secretEncryptionKeyTemplate.getPrivate().setBooleanValue(Boolean.TRUE);
+        secretEncryptionKeyTemplate.getSensitive().setBooleanValue(Boolean.TRUE);
+        secretEncryptionKeyTemplate.getExtractable().setBooleanValue(Boolean.TRUE);
+        secretEncryptionKeyTemplate.getWrap().setBooleanValue(Boolean.TRUE);
+
+        AESSecretKey encryptionKey = (AESSecretKey) session.generateKey(keyMechanism,
+                secretEncryptionKeyTemplate);
+
+        System.out
+                .println("################################################################################");
+
+        System.out
+                .println("################################################################################");
+        System.out.println("encrypting data from file: " + FileToEncrypt);
+
+        InputStream dataInputStream = new FileInputStream(FileToEncrypt);
+
+        byte[] dataBuffer = new byte[1024];
+        int bytesRead;
+        ByteArrayOutputStream streamBuffer = new ByteArrayOutputStream();
+
+        // feed in all data from the input stream
+        while ((bytesRead = dataInputStream.read(dataBuffer)) >= 0) {
+            streamBuffer.write(dataBuffer, 0, bytesRead);
+        }
+        Arrays.fill(dataBuffer, (byte) 0); // ensure that no data is left in the
+        // memory
+        streamBuffer.flush();
+        streamBuffer.close();
+        byte[] rawData = streamBuffer.toByteArray();
+
+        // be sure that your token can process the specified mechanism
+        Mechanism encryptionMechanism = Mechanism.get(PKCS11Constants.CKM_AES_CBC_PAD);
+        byte[] encryptInitializationVector = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+        InitializationVectorParameters encryptInitializationVectorParameters = new InitializationVectorParameters(
+                encryptInitializationVector);
+        encryptionMechanism.setParameters(encryptInitializationVectorParameters);
+
+        // initialize for encryption
+        session.encryptInit(encryptionMechanism, encryptionKey);
+
+        byte[] encryptedData = session.encrypt(rawData);
+
+        System.out
+                .println("################################################################################");
+
+        System.out.println("generate secret wrapping key");
+
+        AESSecretKey wrappingKey = (AESSecretKey) session.generateKey(keyMechanism,
+                secretEncryptionKeyTemplate);
+
+        System.out.println("wrapping key");
+
+        byte[] wrappedKey = session.wrapKey(encryptionMechanism, wrappingKey, encryptionKey);
+        AESSecretKey keyTemplate = new AESSecretKey();
+        keyTemplate.getDecrypt().setBooleanValue(Boolean.TRUE);
+
+        System.out.println("unwrapping key");
+
+        AESSecretKey unwrappedKey = (AESSecretKey) session.unwrapKey(encryptionMechanism,
+                wrappingKey, wrappedKey, keyTemplate);
+
+        System.out
+                .println("################################################################################");
+        System.out.println("trying to decrypt");
+
+        Mechanism decryptionMechanism = Mechanism.get(PKCS11Constants.CKM_AES_CBC_PAD);
+        byte[] decryptInitializationVector = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+        InitializationVectorParameters decryptInitializationVectorParameters = new InitializationVectorParameters(
+                decryptInitializationVector);
+        decryptionMechanism.setParameters(decryptInitializationVectorParameters);
+
+        // initialize for decryption
+        session.decryptInit(decryptionMechanism, unwrappedKey);
+
+        byte[] decryptedData = session.decrypt(encryptedData);
+
+        // compare initial data and decrypted data
+        boolean equal = false;
+        if (rawData.length != decryptedData.length) {
+            equal = false;
+        } else {
+            equal = true;
+            for (int i = 0; i < rawData.length; i++) {
+                if (rawData[i] != decryptedData[i]) {
+                    equal = false;
+                    break;
+                }
+            }
+        }
+
+        System.out.println((equal) ? "successful" : "ERROR");
+
+        System.out
+                .println("################################################################################");
+
+        session.closeSession();
+
+
+    }
+
+        private void showDialog (String Dialog) {
 
         Stage dialogStage = new Stage();
         dialogStage.initModality(Modality.WINDOW_MODAL);
@@ -387,7 +686,6 @@ public class ModuleManager {
         dialogStage.show();
 
     }
-
 
     public void end() throws TokenException {
         if (m != null) {

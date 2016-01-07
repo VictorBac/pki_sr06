@@ -144,15 +144,19 @@ public class Window extends Application {
         MenuItem editPIN = new MenuItem("EDIT PIN");
         editPIN.setOnAction((event) -> EditPIN());
 
-        MenuItem generatewrappingKey = new MenuItem("Gen Wrapping Key");
-        generatewrappingKey.setOnAction((event) -> genWK());
+        MenuItem generateKeyAES = new MenuItem("EncryptFileWithAES");
+        generateKeyAES.setOnAction((event) -> genWK());
+
+
+        MenuItem wrapFile = new MenuItem("WrapWithAES");
+        wrapFile.setOnAction((event) -> wrapp());
 
 
         MenuItem editSOPIN = new MenuItem("EDIT SOPIN");
         editSOPIN.setOnAction((event) -> EditSOPIN());
 
 
-        menuEdit.getItems().addAll(CreateToken,InitToken,editPIN,editSOPIN,generatewrappingKey);
+        menuEdit.getItems().addAll(CreateToken,InitToken,editPIN,editSOPIN,generateKeyAES,wrapFile);
 
 
         Menu menuView = new Menu("View");
@@ -599,15 +603,20 @@ public class Window extends Application {
 
             try {
 
-                showDialog(AskDateEnd.getValue().toString()+AskDateStart.getValue().toString());
+      //          showDialog(AskDateEnd.getValue().toString()+AskDateStart.getValue().toString());
 
-               manager.generateAESkey(item.getToken(),AskPIN.getText(),AskLabel.getText(),item.getToken(),AskDateStart.getValue(),AskDateEnd.getValue());
 
+                String pathfiletoE = askFileToEncrypt();
+                String pathfileE = askFileToEncrypt();
+                manager.encryptAES(item,AskPIN.getText(),pathfiletoE,pathfileE,AskDateStart.getValue(),AskDateEnd.getValue());
 
 
             } catch (TokenException e) {
                 showDialog(e.toString());
                 e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+                showDialog(e.toString());
             }
 
             stage1.hide();}
@@ -621,6 +630,67 @@ public class Window extends Application {
 
         genWK.getChildren().addAll(hbOldPIN,Labels,Date,hbBUT);
         stage1.show();
+
+    }
+
+    private void wrapp() {
+
+        VBox genWK= new VBox();
+
+        Stage stage1 = new Stage();
+        stage1.setTitle("WrapFile");
+        stage1.setScene(new Scene(genWK, 400, 300));
+        stage1.getScene().getStylesheets().add("css/stylesheet.css");
+
+
+        Slot item = getCurrentSlot();
+
+
+        TextField AskPIN = new TextField();
+        Label labelPIN = new Label("Your PIN:");
+
+        HBox hbOldPIN = new HBox();
+        hbOldPIN.getChildren().addAll(labelPIN, AskPIN);
+        hbOldPIN.setAlignment(Pos.CENTER);
+
+
+
+        Button Cancel = new Button();
+        Cancel.setText("Cancel");
+        Cancel.setOnAction((event) -> stage1.hide());
+
+        Button Change = new Button();
+        Change.setText("Generate");
+        Change.setOnAction((event) -> {
+
+            try {
+
+
+
+                String pathfiletoE = askFileToEncrypt();
+                manager.wrapAES(item,AskPIN.getText(),pathfiletoE,null);
+
+
+            } catch (TokenException e) {
+                showDialog(e.toString());
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+                showDialog(e.toString());
+            }
+
+            stage1.hide();}
+
+
+        );
+
+        HBox hbBUT = new HBox();
+        hbBUT.getChildren().addAll(Cancel, Change);
+        hbBUT.setAlignment(Pos.CENTER);
+
+        genWK.getChildren().addAll(hbOldPIN,hbBUT);
+        stage1.show();
+
 
     }
 
@@ -640,6 +710,19 @@ public class Window extends Application {
 
     }
 
+    private String askFileToEncrypt() {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Choose File to Encrypt");
+        fileChooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("Files", "*.txt", "*.jpeg", "*.doc"));
+        File filetoEncrypt = fileChooser.showOpenDialog(root.getScene().getWindow());
+
+        if (filetoEncrypt != null) {
+            return filetoEncrypt.getAbsolutePath();
+        }
+
+        return null;
+    }
 
     }
 
