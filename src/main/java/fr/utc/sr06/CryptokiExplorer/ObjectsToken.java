@@ -1,6 +1,5 @@
 package fr.utc.sr06.CryptokiExplorer;
 
-import iaik.pkcs.pkcs11.Session;
 import iaik.pkcs.pkcs11.Slot;
 import iaik.pkcs.pkcs11.Token;
 import iaik.pkcs.pkcs11.TokenException;
@@ -10,15 +9,11 @@ import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.event.Event;
-import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.control.*;
-import javafx.scene.input.InputEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
-import javafx.scene.text.Text;
 import javafx.util.StringConverter;
 
 import java.util.Locale;
@@ -30,7 +25,7 @@ import java.util.ResourceBundle;
 public class ObjectsToken extends BaseUIFunction {
     private Slot slotObj;
     private VBox ui = null;
-    private SimpleStringProperty mechanims=new SimpleStringProperty();
+    private SimpleStringProperty objDescription = new SimpleStringProperty();
 
     private ChoiceBox<Object> select = null;
     private HBox boiteH = null;
@@ -81,10 +76,10 @@ public class ObjectsToken extends BaseUIFunction {
         });
 
         TextArea description = new TextArea();
-        description.textProperty().bind(mechanims);
+        description.textProperty().bind(objDescription);
         select.getSelectionModel().selectedItemProperty().addListener((ov, old_value, new_value) -> {
             if (new_value != null) {
-                mechanims.set(new_value.toString());
+                objDescription.set(new_value.toString());
             }
         });
 
@@ -92,9 +87,8 @@ public class ObjectsToken extends BaseUIFunction {
 
         pinInput.setOnAction((event) -> loadObjets(pinInput.getText(), slot, pinBar, messageLabel, description));
         loadButton.setOnMouseClicked((event) -> loadObjets(pinInput.getText(), slot, pinBar, messageLabel, description));
-        pinInput.setOnAction((event) -> destroyObj(slot,select, pinInput.getText(),description ));
 
-        destroyButton.setOnMouseClicked((event) -> destroyObj(slot,select, pinInput.getText(), description ));
+        destroyButton.setOnMouseClicked((event) -> destroyObj(slot,select, pinInput.getText()));
 
         try {
             Token token = slot.getToken();
@@ -135,7 +129,7 @@ public class ObjectsToken extends BaseUIFunction {
                     ui.setFillWidth(true);
                     ui.setVgrow(description, Priority.ALWAYS);
                     Platform.runLater(() -> select.getSelectionModel().selectFirst());
-                    description.setText(obj1.get(0).toString());
+                    objDescription.set(obj1.get(0).toString());
                 }
             }
         } catch (TokenException e) {
@@ -149,13 +143,13 @@ public class ObjectsToken extends BaseUIFunction {
         }
     }
 
-    private void destroyObj (Slot slot, ChoiceBox<Object> select1, String pinS, TextArea text) {
+    private void destroyObj (Slot slot, ChoiceBox<Object> select1, String pinS) {
         try {
             Token tok = slot.getToken();
             Object obj = select1.getSelectionModel().selectedItemProperty().get();
             select1.getItems().remove(obj);
             manager.destroyObject(tok,obj , pinS);
-            text.setText("");
+            objDescription.set("");
         } catch (TokenException e ){e.printStackTrace();}
 
     }

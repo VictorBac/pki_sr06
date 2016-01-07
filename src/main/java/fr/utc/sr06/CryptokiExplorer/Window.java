@@ -132,7 +132,7 @@ public class Window extends Application {
 
         menuFile.getItems().addAll(module, quit);
 
-        Menu menuEdit = new Menu("Edit");
+        Menu menuEdit = new Menu("Actions");
 
          MenuItem CreateToken = new MenuItem("CreateToken");
         CreateToken.setOnAction((event) -> CreateToken());
@@ -144,9 +144,6 @@ public class Window extends Application {
         MenuItem editPIN = new MenuItem("EDIT PIN");
         editPIN.setOnAction((event) -> EditPIN());
 
-        MenuItem generateKeyAES = new MenuItem("EncryptFileWithAES");
-        generateKeyAES.setOnAction((event) -> genWK());
-
 
         MenuItem wrapFile = new MenuItem("WrapWithAES");
         wrapFile.setOnAction((event) -> wrapp());
@@ -156,12 +153,9 @@ public class Window extends Application {
         editSOPIN.setOnAction((event) -> EditSOPIN());
 
 
-        menuEdit.getItems().addAll(CreateToken,InitToken,editPIN,editSOPIN,generateKeyAES,wrapFile);
+        menuEdit.getItems().addAll(CreateToken,InitToken,editPIN,editSOPIN,wrapFile);
 
-
-        Menu menuView = new Menu("View");
-
-        menuBar.getMenus().addAll(menuFile, menuEdit, menuView);
+        menuBar.getMenus().addAll(menuFile, menuEdit);
 
         return menuBar;
     }
@@ -265,7 +259,8 @@ public class Window extends Application {
             functions.setAll(new InfoFunction(t_("infoFunction"), manager),
                     new MechanismsFunction(t_("mechanismsFunction"), manager),
                     new ObjectsToken (t_("ObjectsToken"), manager),
-                    new RSAFunction(t_("rsaFunction"), manager));
+                    new RSAFunction(t_("rsaFunction"), manager),
+                    new AESFunction(t_("aesFunction"), manager));
 
             Platform.runLater(() -> { // Select first slot and info function
                 if (!slots.isEmpty()) {
@@ -554,83 +549,6 @@ public class Window extends Application {
 
         EditPinWind.getChildren().addAll(TextIntro,labelToken,PINinit,hbPIN,hbBUT);
         stage1.show();
-    }
-
-    private void genWK() {
-        VBox genWK= new VBox();
-
-        Stage stage1 = new Stage();
-        stage1.setTitle("Generate AES Key");
-        stage1.setScene(new Scene(genWK, 400, 300));
-        stage1.getScene().getStylesheets().add("css/stylesheet.css");
-
-
-        Slot item = getCurrentSlot();
-
-
-        TextField AskPIN = new TextField();
-        Label labelPIN = new Label("Your PIN:");
-
-        HBox hbOldPIN = new HBox();
-        hbOldPIN.getChildren().addAll(labelPIN, AskPIN);
-        hbOldPIN.setAlignment(Pos.CENTER);
-
-        TextField AskLabel = new TextField();
-        Label labelLabel = new Label("Label:");
-
-
-        HBox Labels = new HBox();
-        Labels.getChildren().addAll(labelLabel, AskLabel);
-        Labels.setAlignment(Pos.CENTER);
-        DatePicker AskDateStart = new DatePicker(LocalDate.now());
-        Label labelDateStart = new Label("StartDate:");
-        DatePicker AskDateEnd = new DatePicker(LocalDate.now());
-        Label labelDateEnd = new Label("EndDate:");
-
-
-        HBox Date = new HBox();
-        Date.getChildren().addAll(labelDateStart, AskDateStart,labelDateEnd,AskDateEnd);
-        Date.setAlignment(Pos.CENTER);
-
-
-        Button Cancel = new Button();
-        Cancel.setText("Cancel");
-        Cancel.setOnAction((event) -> stage1.hide());
-
-        Button Change = new Button();
-        Change.setText("Generate");
-        Change.setOnAction((event) -> {
-
-            try {
-
-      //          showDialog(AskDateEnd.getValue().toString()+AskDateStart.getValue().toString());
-
-
-                String pathfiletoE = askFileToEncrypt();
-                String pathfileE = askFileToEncrypt();
-                manager.encryptAES(item,AskPIN.getText(),pathfiletoE,pathfileE,AskDateStart.getValue(),AskDateEnd.getValue());
-
-
-            } catch (TokenException e) {
-                showDialog(e.toString());
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
-                showDialog(e.toString());
-            }
-
-            stage1.hide();}
-
-
-        );
-
-        HBox hbBUT = new HBox();
-        hbBUT.getChildren().addAll(Cancel, Change);
-        hbBUT.setAlignment(Pos.CENTER);
-
-        genWK.getChildren().addAll(hbOldPIN,Labels,Date,hbBUT);
-        stage1.show();
-
     }
 
     private void wrapp() {

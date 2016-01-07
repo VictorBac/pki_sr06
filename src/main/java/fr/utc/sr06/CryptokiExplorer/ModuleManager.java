@@ -1,23 +1,13 @@
 package fr.utc.sr06.CryptokiExplorer;
 
-import iaik.pkcs.pkcs11.*;
 import iaik.pkcs.pkcs11.Mechanism;
+import iaik.pkcs.pkcs11.*;
 import iaik.pkcs.pkcs11.objects.*;
 import iaik.pkcs.pkcs11.objects.Object;
 import iaik.pkcs.pkcs11.parameters.InitializationVectorParameters;
-import iaik.pkcs.pkcs11.wrapper.*;
-import javafx.geometry.Insets;
-import javafx.geometry.Pos;
-import javafx.scene.Scene;
-import javafx.scene.control.Button;
-import javafx.scene.layout.VBoxBuilder;
-import javafx.scene.text.Text;
-import javafx.stage.FileChooser;
-import javafx.stage.Modality;
-import javafx.stage.Stage;
-import javafx.util.StringConverter;
+import iaik.pkcs.pkcs11.wrapper.PKCS11Constants;
+import iaik.pkcs.pkcs11.wrapper.PKCS11Implementation;
 
-import javax.swing.text.Utilities;
 import java.io.*;
 import java.math.BigInteger;
 import java.security.KeyFactory;
@@ -25,11 +15,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.RSAPublicKeySpec;
 import java.security.spec.X509EncodedKeySpec;
-import java.sql.Time;
-import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.*;
-
 
 
 /**
@@ -114,7 +100,6 @@ public class ModuleManager {
         return tok;
     }
 
-
     public void changeUserPin(Token tok, String oldPin, String newPin) throws TokenException {
 
         Session session = tok.openSession(Token.SessionType.SERIAL_SESSION, Token.SessionReadWriteBehavior.RW_SESSION, null, null);
@@ -126,37 +111,22 @@ public class ModuleManager {
         System.out.println("Pin changed");
     }
 
-
-
-
-
     public void createRsaPairKey(Token tok, String userPin, String label, long modulusArg) throws TokenException, NoSuchAlgorithmException, InvalidKeySpecException {
-
-        Session session2 = tok.openSession(Token.SessionType.SERIAL_SESSION, Token.SessionReadWriteBehavior.RW_SESSION, null, null);
-        session2.login(Session.UserType.USER, userPin.toCharArray());
-
-        System.out
-                .println("################################################################################");
-        System.out.print("Generating new 2048 bit RSA key-pair... ");
-        System.out.flush();
+        Session session = tok.openSession(Token.SessionType.SERIAL_SESSION, Token.SessionReadWriteBehavior.RW_SESSION, null, null);
+        session.login(Session.UserType.USER, userPin.toCharArray());
 
         // first check out what attributes of the keys we may set
         HashSet supportedMechanisms = new HashSet<>(Arrays.asList(tok.getMechanismList()));
 
         MechanismInfo signatureMechanismInfo;
         if (supportedMechanisms.contains(Mechanism.get(PKCS11Constants.CKM_RSA_PKCS))) {
-            signatureMechanismInfo = tok.getMechanismInfo(Mechanism
-                    .get(PKCS11Constants.CKM_RSA_PKCS));
+            signatureMechanismInfo = tok.getMechanismInfo(Mechanism.get(PKCS11Constants.CKM_RSA_PKCS));
         } else if (supportedMechanisms.contains(Mechanism.get(PKCS11Constants.CKM_RSA_X_509))) {
-            signatureMechanismInfo = tok.getMechanismInfo(Mechanism
-                    .get(PKCS11Constants.CKM_RSA_X_509));
+            signatureMechanismInfo = tok.getMechanismInfo(Mechanism.get(PKCS11Constants.CKM_RSA_X_509));
         } else if (supportedMechanisms.contains(Mechanism.get(PKCS11Constants.CKM_RSA_9796))) {
-            signatureMechanismInfo = tok.getMechanismInfo(Mechanism
-                    .get(PKCS11Constants.CKM_RSA_9796));
-        } else if (supportedMechanisms.contains(Mechanism
-                .get(PKCS11Constants.CKM_RSA_PKCS_OAEP))) {
-            signatureMechanismInfo = tok.getMechanismInfo(Mechanism
-                    .get(PKCS11Constants.CKM_RSA_PKCS_OAEP));
+            signatureMechanismInfo = tok.getMechanismInfo(Mechanism.get(PKCS11Constants.CKM_RSA_9796));
+        } else if (supportedMechanisms.contains(Mechanism.get(PKCS11Constants.CKM_RSA_PKCS_OAEP))) {
+            signatureMechanismInfo = tok.getMechanismInfo(Mechanism.get(PKCS11Constants.CKM_RSA_PKCS_OAEP));
         } else {
             signatureMechanismInfo = null;
         }
@@ -175,16 +145,12 @@ public class ModuleManager {
         new Random().nextBytes(id);
         rsaPublicKeyTemplate.getId().setByteArrayValue(id);
         rsaPublicKeyTemplate.getLabel().setCharArrayValue(label.toCharArray());
-        // rsaPublicKeyTemplate.getLabel().setCharArrayValue(args[2].toCharArray());
 
         rsaPrivateKeyTemplate.getSensitive().setBooleanValue(Boolean.TRUE);
         rsaPrivateKeyTemplate.getToken().setBooleanValue(Boolean.TRUE);
         rsaPrivateKeyTemplate.getPrivate().setBooleanValue(Boolean.TRUE);
         rsaPrivateKeyTemplate.getId().setByteArrayValue(id);
         rsaPrivateKeyTemplate.getLabel().setCharArrayValue(label.toCharArray());
-        // byte[] subject = args[1].getBytes();
-        // rsaPrivateKeyTemplate.getSubject().setByteArrayValue(subject);
-        // rsaPrivateKeyTemplate.getLabel().setCharArrayValue(args[2].toCharArray());
 
         // set the attributes in a way netscape does, this should work with most tokens
         if (signatureMechanismInfo != null) {
@@ -225,31 +191,13 @@ public class ModuleManager {
         rsaPrivateKeyTemplate.getKeyType().setPresent(false);
         rsaPrivateKeyTemplate.getObjectClass().setPresent(false);
 
-        KeyPair generatedKeyPair = session2.generateKeyPair(keyPairGenerationMechanism,
+        KeyPair generatedKeyPair = session.generateKeyPair(keyPairGenerationMechanism,
                 rsaPublicKeyTemplate, rsaPrivateKeyTemplate);
         RSAPublicKey generatedRSAPublicKey = (RSAPublicKey) generatedKeyPair.getPublicKey();
         RSAPrivateKey generatedRSAPrivateKey = (RSAPrivateKey) generatedKeyPair
                 .getPrivateKey();
         // no we may work with the keys...
 
-        System.out.println("Success");
-        System.out.println("The public key is");
-        System.out
-                .println("_______________________________________________________________________________");
-        System.out.println(generatedRSAPublicKey);
-        System.out
-                .println("_______________________________________________________________________________");
-        System.out.println("The private key is");
-        System.out
-                .println("_______________________________________________________________________________");
-        System.out.println(generatedRSAPrivateKey);
-        System.out
-                .println("_______________________________________________________________________________");
-
-        // write the public key to file
-        System.out
-                .println("################################################################################");
-        //System.out.println("Writing the public key of the generated key-pair to file: "+ args[1]);
         RSAPublicKey exportableRsaPublicKey = generatedRSAPublicKey;
         BigInteger modulus = new BigInteger(1, exportableRsaPublicKey.getModulus()
                 .getByteArrayValue());
@@ -262,27 +210,14 @@ public class ModuleManager {
         X509EncodedKeySpec x509EncodedPublicKey = (X509EncodedKeySpec) keyFactory.getKeySpec(
                 javaRsaPublicKey, X509EncodedKeySpec.class);
 
-        /*FileOutputStream publicKeyFileStream = new FileOutputStream(args[1]);
-        publicKeyFileStream.write(x509EncodedPublicKey.getEncoded());
-        publicKeyFileStream.flush();
-        publicKeyFileStream.close();
-        */
-        System.out
-                .println("################################################################################");
-
         // now we try to search for the generated keys
-        System.out
-                .println("################################################################################");
-        System.out
-                .println("Trying to search for the public key of the generated key-pair by ID: "
-                        + Functions.toHexString(id));
         // set the search template for the public key
         RSAPublicKey exportRsaPublicKeyTemplate = new RSAPublicKey();
         exportRsaPublicKeyTemplate.getId().setByteArrayValue(id);
 
-        session2.findObjectsInit(exportRsaPublicKeyTemplate);
-        Object[] foundPublicKeys = session2.findObjects(1);
-        session2.findObjectsFinal();
+        session.findObjectsInit(exportRsaPublicKeyTemplate);
+        Object[] foundPublicKeys = session.findObjects(1);
+        session.findObjectsFinal();
 
         if (foundPublicKeys.length != 1) {
             System.out.println("Error: Cannot find the public key under the given ID!");
@@ -295,12 +230,8 @@ public class ModuleManager {
                     .println("_______________________________________________________________________________");
         }
 
-        System.out
-                .println("################################################################################");
-
-        session2.closeSession();
-        //m.finalize(null);
-
+        session.logout();
+        session.closeSession();
     }
 
     private List<Object> listObjects(Session sessionObj) throws TokenException {
@@ -324,14 +255,34 @@ public class ModuleManager {
         return obj;
     }
 
+    @FunctionalInterface
+    public interface SessionFunction<R> {
+        R apply(Session s) throws TokenException;
+    }
+
+    private <R> R withUserSession(Token tok, String pinS, SessionFunction<R> body) throws TokenException {
+        char[] pin = pinS.toCharArray();
+
+        Session sessionObj = tok.openSession(Token.SessionType.SERIAL_SESSION, Token.SessionReadWriteBehavior.RW_SESSION, null, null);
+        sessionObj.login(Session.UserType.USER, pin);
+
+        R result = body.apply(sessionObj);
+
+        sessionObj.logout();
+        sessionObj.closeSession();
+
+        return result;
+    }
+
     public void destroyObject (Token tok, Object objToDestroy, String pinS) throws TokenException {
         char[] mdp = pinS.toCharArray();
 
         Session sessionObj = tok.openSession(Token.SessionType.SERIAL_SESSION, Token.SessionReadWriteBehavior.RW_SESSION, null, null);
+        sessionObj.login(Session.UserType.USER, mdp);
         sessionObj.destroyObject(objToDestroy);
+        sessionObj.logout();
+        sessionObj.closeSession();
         System.out.println("destruction2");
-
-
     }
 
     public void objectDeconnection (Token tok) throws  TokenException {
@@ -351,76 +302,52 @@ public class ModuleManager {
         return  obj;
     }
 
-//  NE MARCHE PASS ! :
-    public void generateAESkey (Token token, String pin, String Label, Token tok, LocalDate StartDate, LocalDate EndDate) throws TokenException {
+    public AESSecretKey generateAESkey (Token token, String pin, String Label, long bitesLength) throws TokenException {
+        return withUserSession(token, pin, (session) -> {
+            Mechanism keyGenerationMechanism = Mechanism.get(PKCS11Constants.CKM_AES_KEY_GEN);
+            AESSecretKey keyTemplate = new AESSecretKey();
 
-        Session session = null;
+            byte[] id = new byte[20];
+            new Random().nextBytes(id);
+            keyTemplate.getId().setByteArrayValue(id);
 
-        session = token.openSession(Token.SessionType.SERIAL_SESSION, Token.SessionReadWriteBehavior.RW_SESSION, null, null);
+            keyTemplate.getValueLen().setLongValue(bitesLength / 8L);
+            keyTemplate.getLabel().setCharArrayValue(Label.toCharArray());
+            keyTemplate.getToken().setBooleanValue(true);
+            keyTemplate.getModifiable().setBooleanValue(false); // ?
+            //keyTemplate.getStartDate().setDateValue(Date.from(StartDate.atStartOfDay().atZone(ZoneId.systemDefault()).toInstant()));
+            //keyTemplate.getEndDate().setDateValue(Date.from(EndDate.atStartOfDay().atZone(ZoneId.systemDefault()).toInstant()));
 
-        session.login(Session.UserType.USER, pin.toCharArray());
+            MechanismInfo mechInfo = token.getMechanismInfo(keyGenerationMechanism);
+            keyTemplate.getVerify().setBooleanValue(mechInfo.isVerify());
+            keyTemplate.getEncrypt().setBooleanValue(mechInfo.isEncrypt());
+            keyTemplate.getDerive().setBooleanValue(mechInfo.isDerive());
+            keyTemplate.getDecrypt().setBooleanValue(mechInfo.isDecrypt());
+            keyTemplate.getWrap().setBooleanValue(mechInfo.isWrap());
 
-        Mechanism keyGenerationMechanism = Mechanism.get(PKCS11Constants.CKM_AES_KEY_GEN);
-        AESSecretKey aesKey = new AESSecretKey();
-        aesKey.getValueLen().setLongValue(new Long(32));
-        char[] labelforAES = Label.toCharArray();
-        aesKey.getLabel().setCharArrayValue(labelforAES);
-        @SuppressWarnings("deprecation") Date dateS = new Date(StartDate.getYear(),StartDate.getMonthValue(),StartDate.getDayOfMonth());
-        Date dateE = new Date(EndDate.getYear(),EndDate.getMonthValue(),EndDate.getDayOfMonth());
+            AESSecretKey aesKey = (AESSecretKey) session.generateKey(keyGenerationMechanism, keyTemplate);
 
-        showDialog(dateS.toString()+dateE.toString());
+            // search for newly generated key
+            AESSecretKey aesSearchTemplate = new AESSecretKey();
+            aesSearchTemplate.getId().setByteArrayValue(id);
 
-       // aesKey.getStartDate().setDateValue(dateS);
-       // aesKey.getEndDate().setDateValue(dateE);
+            session.findObjectsInit(aesSearchTemplate);
+            Object[] foundPublicKeys = session.findObjects(1);
+            session.findObjectsFinal();
 
-        AESSecretKey aesKeyNew = (AESSecretKey) session.generateKey(keyGenerationMechanism, aesKey);
-                showDialog("the AES Key is: \n:"+ aesKeyNew.toString());
-        session.closeSession();
+            if (foundPublicKeys.length != 1) {
+                System.out.println("Error: Cannot find the key under the given ID!");
+            } else {
+                System.out.println("Found the key!");
+                System.out.println(foundPublicKeys[0]);
+            }
 
+            return aesKey;
+        });
     }
 
-    public void encryptAES(Slot item, String pin, String FileToEncrypt, String EncryptedFile, LocalDate AskDateStartValue, LocalDate AskDateEndValue) throws TokenException, IOException {
-        Token token = item.getToken();
-
-        Session session;
-        session = openAuthorizedSession(token, Token.SessionReadWriteBehavior.RW_SESSION, pin);
-
-        System.out.println("################################################################################");
-        System.out.println("generate secret encryption/decryption key");
-        Mechanism keyMechanism = Mechanism.get(PKCS11Constants.CKM_AES_KEY_GEN);
-        AESSecretKey secretEncryptionKeyTemplate = new AESSecretKey();
-        byte[] id = new byte[20];
-
-        new Random().nextBytes(id);
-        secretEncryptionKeyTemplate.getId().setByteArrayValue(id);
-        secretEncryptionKeyTemplate.getLabel().setCharArrayValue("Encripkey".toCharArray());
-        secretEncryptionKeyTemplate.getWrapWithTrusted().setBooleanValue(Boolean.TRUE);
-        secretEncryptionKeyTemplate.getToken().setBooleanValue(Boolean.TRUE);
-        secretEncryptionKeyTemplate.getValueLen().setLongValue(new Long(16));
-        secretEncryptionKeyTemplate.getEncrypt().setBooleanValue(Boolean.TRUE);
-        secretEncryptionKeyTemplate.getDecrypt().setBooleanValue(Boolean.TRUE);
-        secretEncryptionKeyTemplate.getPrivate().setBooleanValue(Boolean.TRUE);
-        secretEncryptionKeyTemplate.getSensitive().setBooleanValue(Boolean.TRUE);
-        secretEncryptionKeyTemplate.getExtractable().setBooleanValue(Boolean.TRUE);
-        secretEncryptionKeyTemplate.getWrap().setBooleanValue(Boolean.TRUE);
-
-      //  Date dateS = new Date(AskDateStartValue.getYear(),AskDateStartValue.getMonthValue(),AskDateStartValue.getDayOfMonth());
-      //  Date dateE = new Date(AskDateEndValue.getYear(),AskDateEndValue.getMonthValue(),AskDateEndValue.getDayOfMonth());
-        Date dateS = Date.from(AskDateStartValue.atStartOfDay(ZoneId.systemDefault()).toInstant());
-        Date dateE = Date.from(AskDateEndValue.atStartOfDay(ZoneId.systemDefault()).toInstant());
-     //  secretEncryptionKeyTemplate.getStartDate().setDateValue(dateS);
-     //   secretEncryptionKeyTemplate.getEndDate().setDateValue(dateE);
-        AESSecretKey encryptionKey = (AESSecretKey) session.generateKey(keyMechanism,
-                secretEncryptionKeyTemplate);
-
-        System.out.println("PROUT PROUT PROUT secret encryption/decryption key");
-
-
-        System.out
-                .println("################################################################################");
-
-        System.out
-                .println("################################################################################");
+    public void encryptAES(Token token, String pin, String FileToEncrypt, String EncryptedFile, AESSecretKey encryptionKey) throws TokenException, IOException {
+        Session session = openAuthorizedSession(token, Token.SessionReadWriteBehavior.RW_SESSION, pin);
 
         Mechanism encryptionMechanism = Mechanism.get(PKCS11Constants.CKM_AES_CBC_PAD);
         byte[] encryptInitializationVector = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
@@ -498,11 +425,6 @@ output.close();
             }
         }
         System.out.println((equal) ? "successful" : "ERROR");
-
-        System.out
-                .println("################################################################################");
-        session.findObjectsInit(secretEncryptionKeyTemplate);
-        session.findObjectsFinal();
 
         session.closeSession();
 
@@ -668,22 +590,6 @@ output.close();
 
         session.closeSession();
 
-
-    }
-
-        private void showDialog (String Dialog) {
-
-        Stage dialogStage = new Stage();
-        dialogStage.initModality(Modality.WINDOW_MODAL);
-
-
-        Button Ok = new Button("Ok");
-        Ok.setOnAction((event) -> dialogStage.hide());
-
-        dialogStage.setScene(new Scene(VBoxBuilder.create().
-                children(new Text("Exception"+ Dialog), Ok).
-                alignment(Pos.CENTER).padding(new Insets(5)).build()));
-        dialogStage.show();
 
     }
 

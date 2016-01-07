@@ -1,6 +1,7 @@
 package fr.utc.sr06.CryptokiExplorer;
 
 import iaik.pkcs.pkcs11.*;
+import iaik.pkcs.pkcs11.objects.AESSecretKey;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.scene.Node;
@@ -11,13 +12,14 @@ import javafx.scene.layout.VBox;
 
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
+import java.time.LocalDate;
 import java.util.Locale;
 import java.util.ResourceBundle;
 
-public class RSAFunction extends BaseUIFunction {
+public class AESFunction extends BaseUIFunction {
     private Node ui = null;
 
-    public RSAFunction(String name, ModuleManager manager) {
+    public AESFunction(String name, ModuleManager manager) {
         super(name, manager);
     }
 
@@ -42,6 +44,7 @@ public class RSAFunction extends BaseUIFunction {
 
         Label messageLabel = new Label("");
 
+        // pin, label and key length in bites
         HBox inputBar = new HBox();
         inputBar.getStyleClass().add("pin-bar");
         Label pinLabel = new Label("PIN");
@@ -50,26 +53,31 @@ public class RSAFunction extends BaseUIFunction {
         Label labelLabel = new Label("Label");
         TextField labelInput = new TextField();
 
-        Label modulusLabel = new Label("Length");
-        ChoiceBox<Long> modulusInput = new ChoiceBox<>();
-        modulusInput.setItems(FXCollections.observableArrayList(1024L, 2048L, 4096L));
-        Platform.runLater(() -> modulusInput.getSelectionModel().selectFirst());
-
-        Button createButton = new Button("Create Pair");
-        inputBar.getChildren().setAll(pinLabel, pinInput, labelLabel, labelInput, modulusLabel, modulusInput);
+        Label lengthLabel = new Label("Length");
+        ChoiceBox<Long> lengthInput = new ChoiceBox<>();
+        lengthInput.setItems(FXCollections.observableArrayList(128L, 192L, 256L));
+        Platform.runLater(() -> lengthInput.getSelectionModel().selectFirst());
+        inputBar.getChildren().setAll(pinLabel, pinInput, labelLabel, labelInput, lengthLabel, lengthInput);
         inputBar.setHgrow(labelInput, Priority.ALWAYS);
+
+        // validity date range
+        DatePicker AskDateStart = new DatePicker(LocalDate.now());
+        Label labelDateStart = new Label("StartDate");
+        DatePicker AskDateEnd = new DatePicker(LocalDate.now());
+        Label labelDateEnd = new Label("EndDate");
+
+        HBox datesBar = new HBox();
+        datesBar.getStyleClass().add("spaced-box");
+        datesBar.getChildren().addAll(labelDateStart, AskDateStart,labelDateEnd,AskDateEnd);
+
+        //
+        Button createButton = new Button("Create Key");
 
         createButton.setOnAction((event) -> {
             try {
-                manager.createRsaPairKey(tok, pinInput.getText(), labelInput.getText(), modulusInput.getValue());
-                messageLabel.setText("Success !");
+                AESSecretKey key = manager.generateAESkey(tok, pinInput.getText(), labelInput.getText(), lengthInput.getValue());
+                messageLabel.setText("Success ! \n\n" + key.toString());
             } catch (TokenException e) {
-                messageLabel.setText(e.getMessage());
-                e.printStackTrace();
-            } catch (NoSuchAlgorithmException e) {
-                messageLabel.setText(e.getMessage());
-                e.printStackTrace();
-            } catch (InvalidKeySpecException e) {
                 messageLabel.setText(e.getMessage());
                 e.printStackTrace();
             }

@@ -155,3 +155,7 @@
 .pin-bar {
     -fx-spacing: 10px;
 }
+
+.spaced-box {
+    -fx-spacing: 10px;
+}
